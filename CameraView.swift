@@ -21,7 +21,6 @@ struct CameraView: View {
                     Text("No image selected")
                         .foregroundColor(.white)
                         .bold()
-                        
                 }
 
                 Button("Take Photo") {
@@ -84,14 +83,7 @@ struct CameraView: View {
             return
         }
 
-        let urlString = "\(Config.endpoint)customvision/v3.0/Prediction/\(Config.projectID)/classify/iterations/\(Config.publishedModelName)/image"
-        guard let url = URL(string: urlString) else {
-            DispatchQueue.main.async {
-                self.debugInfo = "Invalid URL"
-                self.isLoading = false
-            }
-            return
-        }
+        let url = URL(string: Config.endpoint)!
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

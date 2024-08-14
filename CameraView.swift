@@ -127,7 +127,11 @@ struct CameraView: View {
                                 let tagName = bestPrediction["tagName"] as? String ?? "Unknown"
                                 let probability = bestPrediction["probability"] as? Double ?? 0.0
                                 self.results = "\(tagName): \(String(format: "%.2f", probability * 100))% confidence"
-                                self.debugInfo = "Results parsed successfully"
+                                self.debugInfo = """
+                                    Results are not meant to be taken as medical advice. 
+                                    Please consult with a doctor. The confidence is based on the model's training 
+                                    and indicates how accurate the model's output is based on the data it was trained on.
+                                    """
                             } else {
                                 self.debugInfo = "No predictions available"
                             }

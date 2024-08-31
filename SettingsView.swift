@@ -114,7 +114,7 @@ struct HelpView: View {
             Button(action: {
                 
             }) {
-                Text("ocradar.contact@gmail.com")
+                Text("contact@ocradar.com")
                     .foregroundColor(.blue)
             }
         }

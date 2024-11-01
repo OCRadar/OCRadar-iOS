@@ -38,7 +38,7 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 100)
                     .foregroundColor(.black)
                     .frame(height: 70)
-                    .shadow(color: Color.purple, radius: 75)
+                    .shadow(color: Color.gray, radius: 100)
                     .overlay(
                         RoundedRectangle(cornerRadius: 100)
                             .stroke(

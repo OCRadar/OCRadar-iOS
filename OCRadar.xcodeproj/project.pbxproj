@@ -3,177 +3,148 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0E1AD2FD2C59AC5D0010C715 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1AD2FC2C59AC5A0010C715 /* Config.swift */; };
-		0E2938182C0FF30F002287D8 /* OCR_App_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2938172C0FF30F002287D8 /* OCR_App_iOSApp.swift */; };
-		0E29381A2C0FF30F002287D8 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2938192C0FF30F002287D8 /* ContentView.swift */; };
-		0E29381C2C0FF310002287D8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E29381B2C0FF310002287D8 /* Assets.xcassets */; };
-		0E29381F2C0FF310002287D8 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E29381E2C0FF310002287D8 /* Preview Assets.xcassets */; };
-		0E50C7DA2C2354520077DE1A /* BackendLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E50C7D92C2354480077DE1A /* BackendLink.swift */; };
-		0E86A6002C11FA35008F00DA /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E86A5FF2C11FA35008F00DA /* CameraView.swift */; };
-		0E86A6022C11FABF008F00DA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E86A6012C11FABF008F00DA /* SettingsView.swift */; };
-		0E86A6062C132B7C008F00DA /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E86A6052C132B7C008F00DA /* HomeView.swift */; };
-		0E86A60A2C133CF5008F00DA /* VisionGlassModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E86A6092C133CF5008F00DA /* VisionGlassModifier.swift */; };
-		0E86A6102C133D9B008F00DA /* GlassModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E86A60F2C133D9B008F00DA /* GlassModifier.swift */; };
+		0CA000000000000000000014 /* OCRCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA000000000000000000011 /* OCRCore */; };
+		0CA000000000000000000015 /* OCRVision in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA000000000000000000012 /* OCRVision */; };
+		0CA000000000000000000016 /* OCRUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA000000000000000000013 /* OCRUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0E1AD2FC2C59AC5A0010C715 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		0E2938142C0FF30F002287D8 /* OCR App iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OCR App iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		0E2938172C0FF30F002287D8 /* OCR_App_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCR_App_iOSApp.swift; sourceTree = "<group>"; };
-		0E2938192C0FF30F002287D8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		0E29381B2C0FF310002287D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0E29381E2C0FF310002287D8 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		0E50C7D92C2354480077DE1A /* BackendLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendLink.swift; sourceTree = "<group>"; };
-		0E86A5FF2C11FA35008F00DA /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
-		0E86A6012C11FABF008F00DA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		0E86A6052C132B7C008F00DA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		0E86A6092C133CF5008F00DA /* VisionGlassModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionGlassModifier.swift; sourceTree = "<group>"; };
-		0E86A60F2C133D9B008F00DA /* GlassModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassModifier.swift; sourceTree = "<group>"; };
+		0CA000000000000000000003 /* OCRadar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OCRadar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		0CA000000000000000000004 /* OCRadar */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = OCRadar;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
-		0E2938112C0FF30F002287D8 /* Frameworks */ = {
+		0CA000000000000000000008 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CA000000000000000000014 /* OCRCore in Frameworks */,
+				0CA000000000000000000015 /* OCRVision in Frameworks */,
+				0CA000000000000000000016 /* OCRUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0E29380B2C0FF30F002287D8 = {
+		0CA000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				0E50C7D92C2354480077DE1A /* BackendLink.swift */,
-				0E86A60F2C133D9B008F00DA /* GlassModifier.swift */,
-				0E86A6092C133CF5008F00DA /* VisionGlassModifier.swift */,
-				0E86A6052C132B7C008F00DA /* HomeView.swift */,
-				0E86A6012C11FABF008F00DA /* SettingsView.swift */,
-				0E86A5FF2C11FA35008F00DA /* CameraView.swift */,
-				0E1AD2FC2C59AC5A0010C715 /* Config.swift */,
-				0E2938162C0FF30F002287D8 /* OCR App iOS */,
-				0E2938152C0FF30F002287D8 /* Products */,
+				0CA000000000000000000004 /* OCRadar */,
+				0CA000000000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		0E2938152C0FF30F002287D8 /* Products */ = {
+		0CA000000000000000000002 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0E2938142C0FF30F002287D8 /* OCR App iOS.app */,
+				0CA000000000000000000003 /* OCRadar.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		0E2938162C0FF30F002287D8 /* OCR App iOS */ = {
-			isa = PBXGroup;
-			children = (
-				0E2938172C0FF30F002287D8 /* OCR_App_iOSApp.swift */,
-				0E2938192C0FF30F002287D8 /* ContentView.swift */,
-				0E29381B2C0FF310002287D8 /* Assets.xcassets */,
-				0E29381D2C0FF310002287D8 /* Preview Content */,
-			);
-			path = "OCR App iOS";
-			sourceTree = "<group>";
-		};
-		0E29381D2C0FF310002287D8 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				0E29381E2C0FF310002287D8 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0E2938132C0FF30F002287D8 /* OCR App iOS */ = {
+		0CA000000000000000000005 /* OCRadar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0E2938222C0FF310002287D8 /* Build configuration list for PBXNativeTarget "OCR App iOS" */;
+			buildConfigurationList = 0CA00000000000000000000B /* Build configuration list for PBXNativeTarget "OCRadar" */;
 			buildPhases = (
-				0E2938102C0FF30F002287D8 /* Sources */,
-				0E2938112C0FF30F002287D8 /* Frameworks */,
-				0E2938122C0FF30F002287D8 /* Resources */,
+				0CA000000000000000000007 /* Sources */,
+				0CA000000000000000000008 /* Frameworks */,
+				0CA000000000000000000009 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = "OCR App iOS";
-			productName = "OCR App iOS";
-			productReference = 0E2938142C0FF30F002287D8 /* OCR App iOS.app */;
+			fileSystemSynchronizedGroups = (
+				0CA000000000000000000004 /* OCRadar */,
+			);
+			name = OCRadar;
+			packageProductDependencies = (
+				0CA000000000000000000011 /* OCRCore */,
+				0CA000000000000000000012 /* OCRVision */,
+				0CA000000000000000000013 /* OCRUI */,
+			);
+			productName = OCRadar;
+			productReference = 0CA000000000000000000003 /* OCRadar.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		0E29380C2C0FF30F002287D8 /* Project object */ = {
+		0CA000000000000000000006 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
-					0E2938132C0FF30F002287D8 = {
-						CreatedOnToolsVersion = 15.4;
+					0CA000000000000000000005 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
-			buildConfigurationList = 0E29380F2C0FF30F002287D8 /* Build configuration list for PBXProject "OCR App iOS" */;
-			compatibilityVersion = "Xcode 14.0";
+			buildConfigurationList = 0CA00000000000000000000A /* Build configuration list for PBXProject "OCRadar" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 0E29380B2C0FF30F002287D8;
-			productRefGroup = 0E2938152C0FF30F002287D8 /* Products */;
+			mainGroup = 0CA000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0CA000000000000000000010 /* XCLocalSwiftPackageReference "OCRadarKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0CA000000000000000000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0E2938132C0FF30F002287D8 /* OCR App iOS */,
+				0CA000000000000000000005 /* OCRadar */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		0E2938122C0FF30F002287D8 /* Resources */ = {
+		0CA000000000000000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0E29381F2C0FF310002287D8 /* Preview Assets.xcassets in Resources */,
-				0E29381C2C0FF310002287D8 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		0E2938102C0FF30F002287D8 /* Sources */ = {
+		0CA000000000000000000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0E86A6002C11FA35008F00DA /* CameraView.swift in Sources */,
-				0E86A6102C133D9B008F00DA /* GlassModifier.swift in Sources */,
-				0E86A6022C11FABF008F00DA /* SettingsView.swift in Sources */,
-				0E1AD2FD2C59AC5D0010C715 /* Config.swift in Sources */,
-				0E29381A2C0FF30F002287D8 /* ContentView.swift in Sources */,
-				0E86A6062C132B7C008F00DA /* HomeView.swift in Sources */,
-				0E2938182C0FF30F002287D8 /* OCR_App_iOSApp.swift in Sources */,
-				0E86A60A2C133CF5008F00DA /* VisionGlassModifier.swift in Sources */,
-				0E50C7DA2C2354520077DE1A /* BackendLink.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		0E2938202C0FF310002287D8 /* Debug */ = {
+		0CA00000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -225,8 +196,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -237,7 +207,7 @@
 			};
 			name = Debug;
 		};
-		0E2938212C0FF310002287D8 /* Release */ = {
+		0CA00000000000000000000D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -283,87 +253,83 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		0E2938232C0FF310002287D8 /* Debug */ = {
+		0CA00000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"OCR App iOS/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"OCRadar/Preview Content\"";
 				DEVELOPMENT_TEAM = H7T2D2GL7U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OCRadar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph areas of concern in the mouth for on-device analysis. Photos never leave your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.aniketh.OCR-App-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
-		0E2938242C0FF310002287D8 /* Release */ = {
+		0CA00000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"OCR App iOS/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"OCRadar/Preview Content\"";
 				DEVELOPMENT_TEAM = H7T2D2GL7U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OCRadar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph areas of concern in the mouth for on-device analysis. Photos never leave your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.aniketh.OCR-App-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -371,25 +337,47 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0E29380F2C0FF30F002287D8 /* Build configuration list for PBXProject "OCR App iOS" */ = {
+		0CA00000000000000000000A /* Build configuration list for PBXProject "OCRadar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0E2938202C0FF310002287D8 /* Debug */,
-				0E2938212C0FF310002287D8 /* Release */,
+				0CA00000000000000000000C /* Debug */,
+				0CA00000000000000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0E2938222C0FF310002287D8 /* Build configuration list for PBXNativeTarget "OCR App iOS" */ = {
+		0CA00000000000000000000B /* Build configuration list for PBXNativeTarget "OCRadar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0E2938232C0FF310002287D8 /* Debug */,
-				0E2938242C0FF310002287D8 /* Release */,
+				0CA00000000000000000000E /* Debug */,
+				0CA00000000000000000000F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0CA000000000000000000010 /* XCLocalSwiftPackageReference "OCRadarKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = OCRadarKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0CA000000000000000000011 /* OCRCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OCRCore;
+		};
+		0CA000000000000000000012 /* OCRVision */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OCRVision;
+		};
+		0CA000000000000000000013 /* OCRUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OCRUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = 0E29380C2C0FF30F002287D8 /* Project object */;
+	rootObject = 0CA000000000000000000006 /* Project object */;
 }

@@ -123,4 +123,8 @@ For the ML side, `python -m ocradar_ml.selfcheck` builds both supported architec
 
 ## License
 
-Copyright © 2026 OCRadar. Unauthorized use of any file, code, or information is prohibited.
+**Proprietary — all rights reserved.** Copyright © 2026 OCRadar.
+
+This repository is publicly visible, but it is **not open source**. No permission is granted to use, copy, modify, distribute, or create derivative works from any part of it — including the source, the ML pipeline, trained models, and the design system. Public visibility does not grant a license, and neither does forking or cloning.
+
+See [LICENSE](LICENSE) for the full terms. Licensing inquiries: contact@ocradar.com

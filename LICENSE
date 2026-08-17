@@ -1,0 +1,66 @@
+OCRadar — Proprietary Software
+Copyright © 2026 OCRadar. All rights reserved.
+
+This repository is publicly visible. It is NOT open source, and public
+visibility does not grant a license of any kind.
+
+
+1. NO LICENSE GRANTED
+
+No permission is granted to any person or entity to use, copy, modify,
+merge, publish, distribute, sublicense, sell, host, or create derivative
+works from any part of this software, its source code, assets, models,
+documentation, or design files, in whole or in part, by any means.
+
+Viewing, browsing, forking, or cloning this repository — whether through
+GitHub's interface, its APIs, or any other means — does not grant, imply,
+or transfer any license, right, or interest in this software.
+
+All rights not expressly granted in writing are reserved.
+
+
+2. SCOPE
+
+This notice covers the entire contents of this repository, including but
+not limited to:
+
+  - the Swift application source and the OCRadarKit package
+  - the machine-learning pipeline under ml/ and any trained model weights,
+    manifests, or exported Core ML artifacts
+  - the design system, comps, and visual assets under design/, including
+    the OCRadar name, mark, and logo
+  - all documentation
+
+
+3. PERMITTED USE
+
+You may view this repository for the sole purpose of evaluating the work
+of its authors. Any other use requires prior written permission.
+
+For licensing inquiries, contact contact@ocradar.com.
+
+
+4. TRADEMARKS
+
+"OCRadar", the OCRadar name, and the OCRadar mark and logo are property of
+OCRadar and are not licensed for use.
+
+
+5. NO WARRANTY
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THIS SOFTWARE OR ITS USE.
+
+
+6. NOT A MEDICAL DEVICE
+
+OCRadar is a screening aid. It is not a medical device, and it does not
+provide medical advice, diagnosis, or treatment. It has not been evaluated
+or cleared by the FDA or any other regulatory body. Nothing in this
+repository may be deployed, distributed, or represented as a diagnostic
+tool. See MedicalDisclaimer in OCRadarKit/Sources/OCRCore for the canonical
+user-facing wording.

@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM
+*.dSYM.zip
+timeline.xctimeline
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# Python / ML pipeline
+ml/.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+ml/data/
+ml/runs/
+ml/dist/
+*.pt
+*.pth

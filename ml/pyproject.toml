@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ocradar-ml"
+version = "0.1.0"
+description = "PyTorch training and Core ML export pipeline for the OCRadar oral-lesion classifier."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.3",
+    "torchvision>=0.18",
+    "coremltools>=8.0",
+    "pillow",
+    "numpy",
+    "pyyaml",
+    "tqdm",
+]
+
+[project.scripts]
+ocradar-train = "ocradar_ml.train:main"
+ocradar-export = "ocradar_ml.export:main"
+ocradar-selfcheck = "ocradar_ml.selfcheck:main"
+
+[tool.setuptools.packages.find]
+include = ["ocradar_ml*"]

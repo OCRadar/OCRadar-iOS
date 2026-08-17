@@ -61,6 +61,14 @@ public struct ModelManifest: Codable, Sendable, Equatable {
 }
 
 extension ModelManifest {
+    /// True when `version` identifies the demo stand-in classifier rather
+    /// than a trained model. Used by the UI to mark results and saved scans
+    /// that carry no medical meaning — including records persisted by an
+    /// older demo build after a real model ships.
+    public static func isDemoVersion(_ version: String) -> Bool {
+        version.hasPrefix("mock")
+    }
+
     /// Class set used by `MockLesionClassifier`, previews, and tests. Mirrors
     /// `ml/labels.example.yaml`.
     public static let mockOralLesions = ModelManifest(

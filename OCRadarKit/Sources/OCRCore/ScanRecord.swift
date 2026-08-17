@@ -17,6 +17,12 @@ public final class ScanRecord {
         RiskLevel(rawValue: riskLevelRaw) ?? .low
     }
 
+    /// True when this scan was produced by the demo stand-in classifier
+    /// rather than a trained model, and therefore carries no medical meaning.
+    /// Derived from the stored version so demo records remain identifiable
+    /// even after a build with a real model ships.
+    public var isDemoResult: Bool { ModelManifest.isDemoVersion(modelVersion) }
+
     public init(
         timestamp: Date = .now,
         topClassID: String,

@@ -1,0 +1,33 @@
+# Class metadata joined into ModelManifest.json at export time.
+#
+# Keys are class ids and must match the directory names under data/train/
+# (and therefore the class labels embedded in the exported Core ML model).
+# riskLevel must be exactly one of: low, moderate, high.
+#
+# This file mirrors ModelManifest.mockOralLesions in
+# OCRadarKit/Sources/OCRCore/ModelManifest.swift — keep the wording in sync.
+
+healthy:
+  displayName: No visible lesion
+  riskLevel: low
+  summary: No features associated with common oral lesions were detected in this image.
+
+aphthous_ulcer:
+  displayName: Aphthous ulcer (canker sore)
+  riskLevel: low
+  summary: A common, usually harmless ulcer that typically heals on its own within two weeks.
+
+lichen_planus:
+  displayName: Oral lichen planus
+  riskLevel: moderate
+  summary: A chronic inflammatory condition that should be monitored by a dental professional.
+
+leukoplakia:
+  displayName: Leukoplakia
+  riskLevel: moderate
+  summary: A white patch that can occasionally show precancerous changes and warrants professional evaluation.
+
+erythroplakia:
+  displayName: Erythroplakia
+  riskLevel: high
+  summary: A red patch with a higher likelihood of precancerous change. Seek prompt professional evaluation.

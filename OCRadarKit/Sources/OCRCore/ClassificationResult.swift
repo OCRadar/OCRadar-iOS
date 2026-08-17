@@ -26,6 +26,10 @@ public struct ClassificationResult: Sendable, Equatable {
 
     public var top: LabelScore? { scores.first }
 
+    /// True when this result came from the demo stand-in classifier rather
+    /// than a trained model, and therefore carries no medical meaning.
+    public var isDemoResult: Bool { ModelManifest.isDemoVersion(modelVersion) }
+
     public init(scores: [LabelScore], modelVersion: String, inferenceDuration: Duration) {
         self.scores = scores.sorted { $0.probability > $1.probability }
         self.modelVersion = modelVersion

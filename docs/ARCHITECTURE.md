@@ -134,3 +134,15 @@ No Swift changes are required as long as the new class uses one of the three exi
 6. **Optional: keep the demo set in sync.** The mock's class set (`ModelManifest.mockOralLesions` in OCRCore) mirrors `labels.example.yaml`; if the new class becomes part of the canonical set, update both, per the sync comments in each file.
 
 The one case that does require Swift changes is a **new risk tier**: `RiskLevel` (OCRCore), its color mapping and display label (`Theme` in OCRUI), and the manifest/labels validation (`labels.py` accepts only `low`/`moderate`/`high`) would all need coordinated updates.
+
+## Debug-only QA automation hooks
+
+Debug builds accept launch arguments that let headless automation (or Xcode's scheme arguments) reach any screen and state without touch input; all of them are `#if DEBUG`-gated in `RootView.swift` and compile out of Release builds entirely:
+
+| Launch argument | Effect |
+| --- | --- |
+| `-qaTab home\|scan\|history\|settings` | Selects a tab at launch |
+| `-qaSeedHistory 1` | Seeds three demo `ScanRecord`s (one per risk tier) into an empty store |
+| `-qaShowResult 1` | Runs the active classifier on a generated sample image and presents `ResultView` |
+
+Example: `xcrun simctl launch <udid> com.aniketh.OCR-App-iOS -qaTab history -qaSeedHistory 1`.

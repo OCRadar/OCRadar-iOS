@@ -260,6 +260,9 @@ struct ScanView: View {
             let thumbnail = ImageResizing.jpegThumbnail(from: image)
             if let record = ScanRecord(result: result, thumbnailData: thumbnail) {
                 modelContext.insert(record)
+                // Save immediately: a scan must survive even if the app is
+                // killed before SwiftData's periodic autosave fires.
+                try? modelContext.save()
             }
             presentedOutcome = AnalysisOutcome(result: result, image: image)
         } catch {

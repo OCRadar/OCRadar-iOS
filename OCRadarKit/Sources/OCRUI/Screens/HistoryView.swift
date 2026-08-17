@@ -40,6 +40,9 @@ struct HistoryView: View {
         for index in offsets where records.indices.contains(index) {
             modelContext.delete(records[index])
         }
+        // Persist the deletion immediately so it cannot be resurrected by an
+        // unflushed context if the app is killed right after the swipe.
+        try? modelContext.save()
     }
 }
 

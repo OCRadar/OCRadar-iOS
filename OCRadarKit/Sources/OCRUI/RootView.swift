@@ -9,12 +9,18 @@ extension EnvironmentValues {
     @Entry var lesionClassifier: any LesionClassifying = MockLesionClassifier()
 }
 
+/// The app's top-level tabs.
+enum AppTab: String, Hashable {
+    case home, scan, history, settings
+}
+
 /// The app's top-level view: a four-tab layout over Home, Scan, History, and
 /// Settings, gated by a one-time acknowledgement of the medical disclaimer.
 public struct RootView: View {
     private let classifier: any LesionClassifying
 
     @AppStorage("hasAcknowledgedDisclaimer") private var hasAcknowledgedDisclaimer = false
+    @State private var selectedTab: AppTab
 
     /// Creates the root view.
     /// - Parameter classifier: The inference backend used across the app —
@@ -22,20 +28,30 @@ public struct RootView: View {
     ///   mock so the UI stays fully navigable in demo mode.
     public init(classifier: any LesionClassifying) {
         self.classifier = classifier
+        var initialTab = AppTab.home
+        #if DEBUG
+        // QA-automation hook (debug builds only): `-qaTab scan` selects a
+        // tab at launch so headless screenshot sweeps can reach every screen.
+        if let raw = UserDefaults.standard.string(forKey: "qaTab"),
+           let tab = AppTab(rawValue: raw) {
+            initialTab = tab
+        }
+        #endif
+        _selectedTab = State(initialValue: initialTab)
     }
 
     public var body: some View {
-        TabView {
-            Tab("Home", systemImage: "house") {
+        TabView(selection: $selectedTab) {
+            Tab("Home", systemImage: "house", value: .home) {
                 HomeView()
             }
-            Tab("Scan", systemImage: "camera.viewfinder") {
+            Tab("Scan", systemImage: "camera.viewfinder", value: .scan) {
                 ScanView()
             }
-            Tab("History", systemImage: "clock.arrow.circlepath") {
+            Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
                 HistoryView()
             }
-            Tab("Settings", systemImage: "gearshape") {
+            Tab("Settings", systemImage: "gearshape", value: .settings) {
                 SettingsView()
             }
         }
@@ -46,7 +62,11 @@ public struct RootView: View {
                 hasAcknowledgedDisclaimer = true
             }
             .interactiveDismissDisabled()
+            .presentationDetents([.medium, .large])
         }
+        #if DEBUG
+        .modifier(QAAutomationHooks())
+        #endif
     }
 
     private var needsAcknowledgement: Binding<Bool> {
@@ -95,6 +115,93 @@ private struct DisclaimerSheet: View {
         }
     }
 }
+
+#if DEBUG
+/// Debug-build-only hooks that let headless QA automation reach states that
+/// normally require touch interaction. Activated via launch arguments
+/// (`-qaShowResult 1`, `-qaSeedHistory 1`), which Foundation parses into
+/// `UserDefaults`. Compiled out of Release entirely.
+private struct QAAutomationHooks: ViewModifier {
+    private struct QAOutcome: Identifiable {
+        let id = UUID()
+        let result: ClassificationResult
+        let image: CGImage
+    }
+
+    @Environment(\.lesionClassifier) private var classifier
+    @Environment(\.modelContext) private var modelContext
+    @State private var qaOutcome: QAOutcome?
+
+    func body(content: Content) -> some View {
+        content
+            .task {
+                guard let sample = Self.sampleImage() else { return }
+                if UserDefaults.standard.bool(forKey: "qaSeedHistory") {
+                    seedHistory(with: sample)
+                }
+                if UserDefaults.standard.bool(forKey: "qaShowResult"),
+                   let result = try? await classifier.classify(sample) {
+                    qaOutcome = QAOutcome(result: result, image: sample)
+                }
+            }
+            .sheet(item: $qaOutcome) { outcome in
+                ResultView(result: outcome.result, image: outcome.image)
+            }
+    }
+
+    private func seedHistory(with image: CGImage) {
+        let existing = (try? modelContext.fetchCount(FetchDescriptor<ScanRecord>())) ?? 0
+        guard existing == 0 else { return }
+        let thumbnail = ImageResizing.jpegThumbnail(from: image)
+        let seeds: [(String, String, RiskLevel, Double, Date)] = [
+            ("healthy", "No visible lesion", .low, 0.91, .now.addingTimeInterval(-3_600)),
+            ("leukoplakia", "Leukoplakia", .moderate, 0.64, .now.addingTimeInterval(-90_000)),
+            ("erythroplakia", "Erythroplakia", .high, 0.55, .now.addingTimeInterval(-400_000)),
+        ]
+        for (id, name, risk, probability, timestamp) in seeds {
+            modelContext.insert(
+                ScanRecord(
+                    timestamp: timestamp,
+                    topClassID: id,
+                    topClassName: name,
+                    riskLevel: risk,
+                    probability: probability,
+                    modelVersion: "mock-0.0.0",
+                    thumbnailData: id == "healthy" ? nil : thumbnail
+                )
+            )
+        }
+        try? modelContext.save()
+    }
+
+    /// A deterministic gradient bitmap standing in for a photograph.
+    private static func sampleImage() -> CGImage? {
+        let side = 640
+        guard let context = CGContext(
+            data: nil,
+            width: side,
+            height: side,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        let colors = [
+            CGColor(red: 0.85, green: 0.45, blue: 0.40, alpha: 1),
+            CGColor(red: 0.55, green: 0.20, blue: 0.25, alpha: 1),
+        ] as CFArray
+        if let gradient = CGGradient(colorsSpace: nil, colors: colors, locations: [0, 1]) {
+            context.drawLinearGradient(
+                gradient,
+                start: .zero,
+                end: CGPoint(x: side, y: side),
+                options: []
+            )
+        }
+        return context.makeImage()
+    }
+}
+#endif
 
 #Preview {
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)

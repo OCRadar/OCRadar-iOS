@@ -21,7 +21,7 @@ struct SettingsView: View {
 
     private var modelSection: some View {
         Section("Model") {
-            LabeledContent("Engine", value: classifier.kind == .mock ? "Demo (mock)" : "Core ML")
+            LabeledContent("Engine", value: classifier.kind == .mock ? "Demo" : "Core ML")
             LabeledContent("Version", value: classifier.manifest.modelVersion)
             ForEach(classifier.manifest.classes) { classInfo in
                 HStack(alignment: .firstTextBaseline) {

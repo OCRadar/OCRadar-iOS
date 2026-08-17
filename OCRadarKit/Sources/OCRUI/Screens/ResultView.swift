@@ -13,6 +13,11 @@ struct ResultView: View {
     @Environment(\.lesionClassifier) private var classifier
     @Environment(\.dismiss) private var dismiss
 
+    /// Ring diameter tracks Dynamic Type (its interior text is .title2), so
+    /// the percent and "confidence" label stay inside the stroke at
+    /// accessibility sizes instead of overflowing a fixed 132pt frame.
+    @ScaledMetric(relativeTo: .title2) private var ringSize: CGFloat = 132
+
     var body: some View {
         NavigationStack {
             Group {
@@ -92,7 +97,7 @@ struct ResultView: View {
                     .multilineTextAlignment(.center)
 
                 ProbabilityRing(probability: top.probability, tint: top.riskLevel.color)
-                    .frame(width: 132, height: 132)
+                    .frame(width: ringSize, height: ringSize)
 
                 RiskBadge(level: top.riskLevel)
 

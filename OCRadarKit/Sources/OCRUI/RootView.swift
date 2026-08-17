@@ -32,9 +32,19 @@ public struct RootView: View {
         #if DEBUG
         // QA-automation hook (debug builds only): `-qaTab scan` selects a
         // tab at launch so headless screenshot sweeps can reach every screen.
-        if let raw = UserDefaults.standard.string(forKey: "qaTab"),
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: "qaTab"),
            let tab = AppTab(rawValue: raw) {
             initialTab = tab
+        }
+        // Any qa* argument pre-acknowledges the medical disclaimer: on a
+        // fresh container the blocking first-launch sheet would otherwise
+        // occupy the only presentation slot (dropping `-qaShowResult`'s
+        // ResultView) or be what `-qaTab` screenshots instead of the tab.
+        if defaults.string(forKey: "qaTab") != nil
+            || defaults.bool(forKey: "qaSeedHistory")
+            || defaults.bool(forKey: "qaShowResult") {
+            defaults.set(true, forKey: "hasAcknowledgedDisclaimer")
         }
         #endif
         _selectedTab = State(initialValue: initialTab)
@@ -56,6 +66,12 @@ public struct RootView: View {
             }
         }
         .tint(Theme.accent)
+        // The QA hook is applied inside the `.environment` write below so its
+        // `@Environment(\.lesionClassifier)` (and the ResultView it presents)
+        // resolve to the app-installed classifier, not the `@Entry` default.
+        #if DEBUG
+        .modifier(QAAutomationHooks())
+        #endif
         .environment(\.lesionClassifier, classifier)
         .sheet(isPresented: needsAcknowledgement) {
             DisclaimerSheet {
@@ -64,9 +80,6 @@ public struct RootView: View {
             .interactiveDismissDisabled()
             .presentationDetents([.medium, .large])
         }
-        #if DEBUG
-        .modifier(QAAutomationHooks())
-        #endif
     }
 
     private var needsAcknowledgement: Binding<Bool> {
@@ -120,7 +133,9 @@ private struct DisclaimerSheet: View {
 /// Debug-build-only hooks that let headless QA automation reach states that
 /// normally require touch interaction. Activated via launch arguments
 /// (`-qaShowResult 1`, `-qaSeedHistory 1`), which Foundation parses into
-/// `UserDefaults`. Compiled out of Release entirely.
+/// `UserDefaults`. Compiled out of Release entirely. Any qa* argument also
+/// pre-acknowledges the first-launch disclaimer (see `RootView.init`), so
+/// these flows work on fresh containers without extra arguments.
 private struct QAAutomationHooks: ViewModifier {
     private struct QAOutcome: Identifiable {
         let id = UUID()
@@ -150,8 +165,10 @@ private struct QAAutomationHooks: ViewModifier {
     }
 
     private func seedHistory(with image: CGImage) {
-        let existing = (try? modelContext.fetchCount(FetchDescriptor<ScanRecord>())) ?? 0
-        guard existing == 0 else { return }
+        // Bail out when the count cannot be determined — defaulting to 0 on
+        // error would invert the idempotency guard and append duplicates.
+        guard let existing = try? modelContext.fetchCount(FetchDescriptor<ScanRecord>()),
+              existing == 0 else { return }
         let thumbnail = ImageResizing.jpegThumbnail(from: image)
         let seeds: [(String, String, RiskLevel, Double, Date)] = [
             ("healthy", "No visible lesion", .low, 0.91, .now.addingTimeInterval(-3_600)),

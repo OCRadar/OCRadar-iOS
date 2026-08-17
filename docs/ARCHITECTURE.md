@@ -145,4 +145,6 @@ Debug builds accept launch arguments that let headless automation (or Xcode's sc
 | `-qaSeedHistory 1` | Seeds three demo `ScanRecord`s (one per risk tier) into an empty store |
 | `-qaShowResult 1` | Runs the active classifier on a generated sample image and presents `ResultView` |
 
+Any qa* argument also pre-acknowledges the first-launch medical disclaimer, so these flows work on fresh simulator containers without the blocking sheet capturing the screen or the presentation slot.
+
 Example: `xcrun simctl launch <udid> com.aniketh.OCR-App-iOS -qaTab history -qaSeedHistory 1`.

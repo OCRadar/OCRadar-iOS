@@ -9,8 +9,11 @@ description = "PyTorch training and Core ML export pipeline for the OCRadar oral
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "torch>=2.3",
-    "torchvision>=0.18",
+    # torch 2.5 is the first release where torch.autocast supports the MPS
+    # backend, which train.py uses on Apple Silicon (select_device prefers
+    # MPS and amp_enabled includes it); 2.3/2.4 raise at the first batch.
+    "torch>=2.5",
+    "torchvision>=0.20",
     "coremltools>=8.0",
     "pillow",
     "numpy",

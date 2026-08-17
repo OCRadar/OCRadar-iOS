@@ -24,6 +24,15 @@ struct HomeView: View {
     /// still fits its column at accessibility text sizes.
     @ScaledMetric(relativeTo: .body) private var railNumeralWidth: CGFloat = 52
 
+    /// SF Pro's left side bearing on the hero numeral, as a fraction of its
+    /// point size. A constant rather than a `@ScaledMetric`, because
+    /// `Font.ocrHeroNumeral()` is a fixed 76pt: the bearing is a property of
+    /// the glyphs actually drawn, and those do not grow with Dynamic Type.
+    ///
+    /// `nonisolated` because `OCRUI` compiles with `defaultIsolation(MainActor)`
+    /// and `alignmentGuide`'s closure is `Sendable`.
+    nonisolated private static let heroNumeralBearing: CGFloat = 76 * 0.047
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -33,7 +42,7 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .ocrQAScrollBottom()
-        .background(Theme.canvas)
+        .background { OCRAmbientBackground() }
         // The hero is full-bleed to the top edge; its 96pt top padding is what
         // clears the status bar, so the top edge effect stays off while the page
         // is at rest and comes back the moment anything scrolls under there. The
@@ -73,8 +82,13 @@ struct HomeView: View {
                 selectTab(.scan)
             } label: {
                 HStack(spacing: 9) {
+                    // No size of its own: the glyph inherits the button style's
+                    // 16.5/600, exactly as the `Label` in History's empty state
+                    // does. Pinned at 20/regular it was a third heavier and a
+                    // stroke lighter than the words beside it — the same
+                    // mismatch on the app's two most prominent calls to action.
                     Image(systemName: "camera.fill")
-                        .font(.system(size: 20))
+                        .symbolRenderingMode(.monochrome)
                         .accessibilityHidden(true)
                     Text("New scan")
                 }
@@ -98,25 +112,28 @@ struct HomeView: View {
                 bottomTrailingRadius: Theme.heroCorner
             )
         )
+        // The hero is where this idiom comes from, so it cannot be the one
+        // panel without it: the header bands and both sheet headers now spill a
+        // little of their own light onto the ink below their bottom edge, and a
+        // hero that still ended on a hard chromatic cut would have read as the
+        // odd one out on the screen the direction singled out.
+        .ocrPanelSpill()
         .foregroundStyle(.white)
     }
 
-    /// Two concentric outlines bleeding off the top-right corner — they echo
+    /// The concentric outlines bleeding off the top-right corner — they echo
     /// the radar rings in the app mark.
+    ///
+    /// The hero's own numbers (230 at 70/−40, and an inner ring at exactly
+    /// 0.565 of that, concentric with it) are what `OCRPanelRings` was derived
+    /// from, so this now *calls* the shared motif rather than being a second
+    /// copy of it. The bands and the sheet headers draw the same pair at their
+    /// own sizes; the hero is no longer the only screen with two rings.
     private var decorativeRings: some View {
-        ZStack(alignment: .topTrailing) {
-            // Fills the hero so both rings anchor to its top-right corner.
-            Color.clear
-            Circle()
-                .strokeBorder(.white.opacity(0.14), lineWidth: 1)
-                .frame(width: 230, height: 230)
-                .offset(x: 70, y: -40)
-            Circle()
-                .strokeBorder(.white.opacity(0.14), lineWidth: 1)
-                .frame(width: 130, height: 130)
-                .offset(x: 20, y: 10)
-        }
-        .accessibilityHidden(true)
+        OCRPanelRings(
+            outerDiameter: 230,
+            outerOffset: CGSize(width: 70, height: -40)
+        )
     }
 
     private var wordmarkRow: some View {
@@ -129,8 +146,13 @@ struct HomeView: View {
             Button {
                 selectTab(.settings)
             } label: {
+                // `.medium`, monochrome — the weight every SF Symbol in the app
+                // is now drawn at, from the tab bar's four glyphs to the accent
+                // icons on the Settings rail. A regular-weight gear beside a
+                // 16.5/600 wordmark read as a lighter, borrowed object.
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 19))
+                    .font(.system(size: 19, weight: .medium))
+                    .symbolRenderingMode(.monochrome)
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
                     .modifier(HeroGlassCircle())
@@ -186,6 +208,14 @@ struct HomeView: View {
                     .minimumScaleFactor(0.4)
                     .ocrHeroLineHeight()
                     .padding(.bottom, 10)
+                    // The numeral's *frame* was always on the 26pt page rail;
+                    // its ink was not. SF Pro carries a left side bearing of
+                    // about 0.047em, which at 76pt is 3.6 invisible points — so
+                    // the largest object on the screen was the only one of the
+                    // five stacked elements off the rail, while the capsule,
+                    // the meta line, the class name and the tier all sat on it.
+                    // Nothing else compensates for it, so this does.
+                    .alignmentGuide(.leading) { $0[.leading] + Self.heroNumeralBearing }
                 Text(record.topClassName)
                     .font(.ocrScreenTitle())
                     .tracking(-0.7)
@@ -237,26 +267,31 @@ struct HomeView: View {
 
     // MARK: - Body
 
+    /// One gap between siblings, `spacingL`, all the way down. The page used to
+    /// run 34 / 22 / 16, shrinking monotonically for no reason a reader could
+    /// name, so the one screen with three stacked cards was the one with no
+    /// rhythm. The section head keeps a tighter `spacingM` because it belongs
+    /// to the rows beneath it rather than standing between two siblings.
     private var pageBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             // The newest record is the hero, so the list and the trend only
             // have something to say from the second record onwards.
             if records.count >= 2 {
                 earlierScansHeader
-                    .padding(.bottom, 14)
+                    .padding(.bottom, Theme.spacingM)
                 earlierScansRows
-                    .padding(.bottom, Theme.spacingXL)
+                    .padding(.bottom, Theme.spacingL)
                 chartCard
-                    .padding(.bottom, 22)
+                    .padding(.bottom, Theme.spacingL)
             }
             modelStatusCard
-                .padding(.bottom, Theme.spacingM)
+                .padding(.bottom, Theme.spacingL)
             footnote
         }
         .padding(.horizontal, Theme.pageMargin)
-        .padding(.top, Theme.spacingXL)
-        // Clears the floating tab bar (62 tall, 30 from the bottom).
-        .padding(.bottom, 130)
+        // The same header-to-content step History and Settings use.
+        .padding(.top, Theme.spacingL)
+        .padding(.bottom, Theme.tabBarClearance)
     }
 
     private var earlierScansHeader: some View {
@@ -304,27 +339,45 @@ struct HomeView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                             .foregroundStyle(Theme.numeralMuted)
-                            .frame(width: railNumeralWidth, alignment: .leading)
+                            // Centred, not leading. History centres the same
+                            // datum in a 52pt avatar on the same 52pt column
+                            // against the same title rail, so a left-aligned
+                            // numeral here put the two screens' optical centres
+                            // 9.8pt apart and left 38pt of dead space before
+                            // the title where History has 17.7.
+                            .frame(width: railNumeralWidth, alignment: .center)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(record.topClassName)
                                 .font(.ocrRowTitle())
                                 .tracking(-0.2)
                                 .foregroundStyle(Theme.textPrimary)
-                            Text("\(record.riskLevel.displayLabel) · \(HomeFormat.relative(record.timestamp))")
-                                .font(.ocrMeta())
-                                .foregroundStyle(Theme.textSecondary)
+                            // The shared meta run. The date stays the long
+                            // form the design pins for this screen against
+                            // History's short tokens; what is now shared is the
+                            // hierarchy the two tokens are set in.
+                            //
+                            // `isDemo` is passed from the record's own flag, as
+                            // History's row does. Omitting it let the parameter
+                            // default to `false`, so a demo record read "Moderate
+                            // risk · 1d" here and carried the salmon marker in
+                            // History — one honesty surface disagreeing with
+                            // another, and with this row's own VoiceOver label
+                            // below, which has always said ", demo result".
+                            OCRMetaLine(
+                                tier: record.riskLevel.displayLabel,
+                                timestamp: HomeFormat.relative(record.timestamp),
+                                isDemo: record.isDemoResult
+                            )
                         }
                         .multilineTextAlignment(.leading)
                         Spacer(minLength: Theme.spacingS)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Theme.chevron)
-                            .accessibilityHidden(true)
+                        OCRChevron()
                     }
                     .padding(.vertical, Theme.spacingM)
                     .padding(.horizontal, 18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Theme.surface, in: .rect(cornerRadius: Theme.rowCorner))
+                    .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.rowCorner))
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -361,9 +414,14 @@ struct HomeView: View {
             HomeConfidenceChart(points: chartPoints)
         }
         .padding(.vertical, 22)
-        .padding(.horizontal, 20)
+        // 18, the one horizontal content inset every card and row in the app
+        // uses. At 20 this card's title started 2pt right of the rail rows
+        // stacked directly above it — too small to read as intentional, too
+        // large to be invisible.
+        .padding(.horizontal, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.panelCorner))
+        .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.panelCorner))
     }
 
     /// Oldest first, so the line reads left to right.
@@ -387,7 +445,7 @@ struct HomeView: View {
                 .padding(.top, 5)
             modelStatusText
                 .font(.ocrMeta())
-                .lineSpacing(3)
+                .ocrBodyLeading(size: 13.5)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -395,8 +453,14 @@ struct HomeView: View {
         .padding(.horizontal, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay {
+            // `Theme.noticeBorder`, not the literal `#2A2A2E` this used to
+            // carry. That hex was picked against a pure-black canvas and was
+            // the last neutral grey on Home: beside the violet ink around it
+            // the card's outline read as a different material from every other
+            // hairline in the app. It is the same outline the demo notice in
+            // both sheets uses, which is exactly what this card is.
             RoundedRectangle(cornerRadius: Theme.rowCorner)
-                .strokeBorder(Color(hex: 0x2A2A2E), lineWidth: 1)
+                .strokeBorder(Theme.noticeBorder, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
     }
@@ -431,7 +495,7 @@ struct HomeView: View {
     private var footnote: some View {
         Text(footnoteText)
             .font(.ocrFootnote())
-            .lineSpacing(4)
+            .ocrFootnoteLeading(size: 13)
             .fixedSize(horizontal: false, vertical: true)
             .environment(\.openURL, OpenURLAction { _ in
                 isShowingDisclaimer = true
@@ -456,8 +520,9 @@ struct HomeView: View {
 /// Liquid Glass for the hero's settings button — the one surface on Home that
 /// qualifies. It *floats over* the gradient panel rather than being part of the
 /// page, which is what the material is for, and the gradient gives it something
-/// to refract; the flat cards below it sit on true black, where glass has
-/// nothing to work with and would only mud them.
+/// to refract; the flat cards below it sit on the ink canvas, which is far too
+/// dark and far too even to give glass anything to work with — it would only
+/// mud them.
 ///
 /// Untinted, though the obvious move was to tint it with the `white 16%` the
 /// flat fill used. Both were sampled on the simulator over the hero's `#81499C`:
@@ -546,6 +611,11 @@ private struct HomeConfidenceChart: View {
                     )
                 if let newest = points.last {
                     Circle()
+                        // The design's `#000` core, which is now the ink floor.
+                        // It is deliberately darker than the `surface` card it
+                        // is drawn on — that is what makes the salmon ring read
+                        // as a hollow marker punched through the area fill
+                        // rather than as a filled dot sitting on top of it.
                         .fill(Theme.canvas)
                         .frame(width: 9, height: 9)
                         .overlay(Circle().stroke(Theme.salmon, lineWidth: 2.25))
@@ -574,6 +644,9 @@ private struct HomeConfidenceChart: View {
                     ForEach(labelledIndices, id: \.self) { index in
                         Text(points[index].shortLabel)
                             .font(.system(size: Self.labelFontSize))
+                            // "1h" / "1d" / "5d" read across one row and are
+                            // compared against each other.
+                            .monospacedDigit()
                             .foregroundStyle(
                                 index == points.count - 1
                                     ? Theme.textPrimary

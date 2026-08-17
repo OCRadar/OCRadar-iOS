@@ -23,7 +23,7 @@ struct HistoryView: View {
                 recordList
             }
         }
-        .background(Theme.canvas)
+        .background { OCRAmbientBackground() }
         .sheet(item: $detailRecord) { record in
             HistoryDetailView(record: record)
                 .presentationCornerRadius(Theme.sheetCorner)
@@ -54,17 +54,54 @@ struct HistoryView: View {
     /// system affordance (and stays reachable from the VoiceOver Actions
     /// rotor). All list chrome is stripped so the rows read as the design's
     /// free-standing cards.
+    ///
+    /// The stripping is deliberately exhaustive, because a `List` is the one
+    /// place in this app where Apple's default dark styling can leak back in
+    /// and it leaks in as *grey*, which against the violet ink is instantly
+    /// visible as borrowed chrome. Four separate things had to go and all four
+    /// are still gone:
+    ///
+    /// - the **container background** (`scrollContentBackground(.hidden)`), so
+    ///   the ambient plane behind the screen is what shows;
+    /// - the **cell fill** (`listRowBackground(Color.clear)` on every row,
+    ///   header and footnote included) — this is also what the swipe reveals as
+    ///   a row slides, so a missed one would flash grey mid-gesture;
+    /// - **separators** (`listRowSeparator(.hidden)` on every row). There are no
+    ///   `Section`s, so there are no section separators to chase;
+    /// - the **44pt minimum row height** (`defaultMinListRowHeight`), which
+    ///   otherwise pads the section labels away from their groups.
+    ///
+    /// Nothing here touches `swipeActions`, which is the entire reason this is
+    /// a `List` in the first place.
     private var recordList: some View {
         List {
             header
+                // `ocrPanelSpill` draws 36pt of the band's own light *below*
+                // the band. Every other screen puts its band in a `ScrollView`
+                // or a `ZStack`, where that overhang renders freely; a `List`
+                // clips a row to its own bounds, so here the row has to reserve
+                // the space or History keeps exactly the hard chromatic cut the
+                // spill exists to remove — on the one screen with nothing
+                // beside it to compare against.
+                //
+                // 24 is the gap the design already puts between a band and the
+                // first section label, so the page's rhythm is unchanged and
+                // only the ramp's faintest tail is trimmed: the spill is down
+                // to ~4% indigo by 24pt, under one L\* over the ink.
+                .padding(.bottom, Theme.spacingL)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-            ForEach(monthGroups) { group in
+            ForEach(Array(monthGroups.enumerated()), id: \.element.id) { index, group in
                 OCRSectionLabel(group.title)
-                    .padding(.top, Theme.spacingL)
-                    .padding(.bottom, 12)
+                    // 24 above, 10 below — the same pair Settings puts around
+                    // its five section labels. The 12 this used to sit on was
+                    // the third value in the app for one relationship. The
+                    // first group's 24 is paid by the header row above, which
+                    // has to own it for the spill; a later month pays it here.
+                    .padding(.top, index == 0 ? 0 : Theme.spacingL)
+                    .padding(.bottom, Theme.spacingS)
                     .listRowInsets(EdgeInsets(top: 0, leading: Theme.pageMargin, bottom: 0, trailing: Theme.pageMargin))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -91,10 +128,10 @@ struct HistoryView: View {
 
             Text("Deleting a scan removes it permanently.")
                 .font(.ocrFootnote())
-                .lineSpacing(4)
+                .ocrFootnoteLeading(size: 13)
                 .foregroundStyle(Theme.textTertiary)
-                .padding(.top, 12)
-                .padding(.bottom, 130)
+                .padding(.top, Theme.spacingS)
+                .padding(.bottom, Theme.tabBarClearance)
                 .listRowInsets(EdgeInsets(top: 0, leading: Theme.pageMargin, bottom: 0, trailing: Theme.pageMargin))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -117,7 +154,11 @@ struct HistoryView: View {
     // MARK: - Empty state
 
     /// Restyled empty state (design §3) — deliberately not
-    /// `ContentUnavailableView`, whose system chrome fights the flat dark canvas.
+    /// `ContentUnavailableView`. Its centred grey glyph, grey title and grey
+    /// caption are the single most recognisable "nothing here" layout on the
+    /// platform, and they would land on the ink as borrowed goods. This is the
+    /// same information in the app's own vocabulary: the radar motif as the
+    /// glyph, and the gradient capsule as the way out.
     private var emptyState: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -125,7 +166,7 @@ struct HistoryView: View {
 
                 VStack(spacing: 0) {
                     // `dashedMiddle` is the empty-state variant: solid outer
-                    // ring, dashed middle ring, and the `#4A4A52` centre dot,
+                    // ring, dashed middle ring, and the ink-family centre dot,
                     // all drawn by `OCRRadar` itself.
                     OCRRadar(diameter: 66, sweeping: false, dashedMiddle: true)
                         .accessibilityHidden(true)
@@ -139,7 +180,7 @@ struct HistoryView: View {
 
                     Text("Photos you analyze in the Scan tab are saved here, on this device only.")
                         .font(.ocrBody())
-                        .lineSpacing(4)
+                        .ocrBodyLeading(size: 14.5)
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.bottom, Theme.pageMargin)
@@ -149,12 +190,16 @@ struct HistoryView: View {
                     } label: {
                         Label("Take your first scan", systemImage: "camera.fill")
                     }
-                    .buttonStyle(OCRPrimaryButtonStyle(height: 50))
+                    // No height override: a lone call to action is 54 here, on
+                    // Home's hero and in the three Scan fallbacks alike. The 50
+                    // this carried was a fourth height for one role and a value
+                    // the spec never names.
+                    .buttonStyle(OCRPrimaryButtonStyle())
                     .frame(maxWidth: 300)
                 }
                 .padding(.horizontal, Theme.pageMargin)
                 .padding(.top, 80)
-                .padding(.bottom, 130)
+                .padding(.bottom, Theme.tabBarClearance)
             }
         }
         .scrollIndicators(.hidden)
@@ -212,8 +257,15 @@ struct HistoryView: View {
 
 // MARK: - Row
 
-/// One saved scan: a 52pt confidence avatar, the class name, and a
-/// "<Tier> risk · Demo · 1h" meta line.
+/// One saved scan: a 52pt confidence avatar, the class name, and the shared
+/// `"<Tier> risk · Demo · 1h"` meta line.
+///
+/// The meta run is `OCRMetaLine`, not a joined string: the three tokens are the
+/// same three in the same order the design pins, but the tier now carries the
+/// weight, the demo marker is stated in the app's own salmon dot beside its
+/// word, and the timestamp is the lightest of the three. The word "Demo" itself
+/// is untouched — it is an honesty surface, so what got quieter is the
+/// punctuation around it, never the label.
 private struct HistoryRow: View {
     let record: ScanRecord
     /// The newest record overall wears the button gradient; older ones are flat.
@@ -230,21 +282,20 @@ private struct HistoryRow: View {
                     .tracking(-0.2)
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
-                Text(metaText)
-                    .font(.ocrMeta())
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+                OCRMetaLine(
+                    tier: record.riskLevel.displayLabel,
+                    timestamp: RelativeToken.short(for: record.timestamp),
+                    isDemo: record.isDemoResult
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.chevron)
-                .accessibilityHidden(true)
+            OCRChevron()
         }
         .padding(.vertical, Theme.spacingM)
         .padding(.horizontal, 18)
         .frame(minHeight: Theme.minTarget)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.rowCorner))
+        .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.rowCorner))
         .contentShape(.rect(cornerRadius: Theme.rowCorner))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
@@ -254,7 +305,21 @@ private struct HistoryRow: View {
     private var avatarView: some View {
         Text(percentValue.formatted())
             .font(.system(size: 17, weight: .semibold))
-            .monospacedDigit()
+            // The confidence numeral is the app's signature, and tracking is
+            // half of what makes it one: −3.6 on the hero's 76pt and −1.0 on
+            // Home's 26pt rail are both ≈ −0.04em, and this avatar was the one
+            // confidence figure still set at the system default. −0.7 puts it
+            // on the same ratio, so a 17pt "91" in a circle reads as the same
+            // typeface decision as the 76pt "91%" in the hero.
+            .tracking(-0.7)
+            // **Not** monospaced, and this is the one numeral in the app that
+            // is not. Tabular figures reserve a full advance for the narrow
+            // "1", so "91" hung 1.33pt left of its circle's centre while "64"
+            // sat dead on it — visible on the newest row, which is the
+            // highest-contrast chip on the screen. The design's
+            // monospaced-digit rule is about columns of numbers that have to
+            // line up with each other; these numerals never do, because each
+            // one is centred in its own circle and only the circles align.
             .minimumScaleFactor(0.6)
             .lineLimit(1)
             .foregroundStyle(isNewest ? Theme.onGradient() : Theme.numeralMuted)
@@ -267,18 +332,6 @@ private struct HistoryRow: View {
                 }
             }
             .accessibilityHidden(true)
-    }
-
-    /// "<Tier> risk · Demo · 1h" — the "Demo" token appears only for records
-    /// produced by the stand-in classifier, so a demo scan can never read as
-    /// real analysis in a later build that ships a trained model.
-    private var metaText: String {
-        var parts = [record.riskLevel.displayLabel]
-        if record.isDemoResult {
-            parts.append("Demo")
-        }
-        parts.append(RelativeToken.short(for: record.timestamp))
-        return parts.joined(separator: " · ")
     }
 
     private var percentValue: Int {
@@ -353,10 +406,13 @@ struct HistoryDetailView: View {
                     onDone: { dismiss() }
                 )
 
-                VStack(alignment: .leading, spacing: 18) {
+                // One gap, `spacingL`, between every sibling on the sheet — the
+                // same rhythm the Result sheet and Settings now run on. This
+                // used to be an 18pt stack with a 4pt top-up under the notice,
+                // so the first two gaps on the page were 22 and 18.
+                VStack(alignment: .leading, spacing: Theme.spacingL) {
                     if record.isDemoResult {
                         demoNotice
-                            .padding(.bottom, 4)
                     }
 
                     detailCard
@@ -369,11 +425,14 @@ struct HistoryDetailView: View {
 
                     Text(MedicalDisclaimer.full)
                         .font(.ocrFootnote())
-                        .lineSpacing(4)
+                        .ocrFootnoteLeading(size: 13)
                         .foregroundStyle(Theme.textTertiary)
                 }
                 .padding(.horizontal, Theme.pageMargin)
-                .padding(.top, Theme.pageMargin)
+                // Matches the gap between every pair of siblings below it, so
+                // the header-to-first-card step is part of the same rhythm
+                // rather than a fourth value.
+                .padding(.top, Theme.spacingL)
                 .padding(.bottom, 44)
             }
         }
@@ -382,7 +441,7 @@ struct HistoryDetailView: View {
         // is worth softening, and the body's 44pt bottom padding keeps the
         // disclaimer clear of the dissolve.
         .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .background(Theme.canvas)
+        .background { OCRAmbientBackground() }
     }
 
     private var percentText: String {
@@ -406,7 +465,7 @@ struct HistoryDetailView: View {
     /// builds.
     private var detailCard: some View {
         VStack(spacing: 0) {
-            detailRow("Confidence", percentText, monospaced: true)
+            detailRow("Confidence", percentText)
             rowDivider
             detailRow("Risk tier", record.riskLevel.displayLabel)
             rowDivider
@@ -415,6 +474,7 @@ struct HistoryDetailView: View {
             detailRow("Scanned", scannedLabel)
         }
         .background(Theme.surface, in: .rect(cornerRadius: Theme.cardCorner))
+        .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.cardCorner))
     }
 
     private var modelLabel: String {
@@ -435,7 +495,10 @@ struct HistoryDetailView: View {
         )
     }
 
-    private func detailRow(_ label: String, _ value: String, monospaced: Bool = false) -> some View {
+    /// The `monospaced` flag this used to take was never read — every value
+    /// here sets tabular figures, because all four sit in one right-aligned
+    /// column and are compared down it.
+    private func detailRow(_ label: String, _ value: String) -> some View {
         HStack(spacing: 0) {
             Text(label)
                 .font(.system(size: 16))
@@ -478,6 +541,12 @@ struct HistoryDetailView: View {
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
                 .clipShape(.rect(cornerRadius: Theme.panelCorner))
+                // The photo is the one element on the sheet that is not made
+                // of the app's own materials, so it gets the same lit top edge
+                // the cards above it have. Without it a bright frame sits on
+                // the ink like a sticker; with it, it reads as another plane in
+                // the same stack.
+                .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.panelCorner))
                 .accessibilityLabel("Saved scan photo")
         }
     }

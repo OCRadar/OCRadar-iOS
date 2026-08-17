@@ -1,10 +1,18 @@
 import SwiftUI
 
-/// Flat opaque card. Replaces the old translucent `GlassCard` treatment — the
+/// Opaque card. Replaces the old translucent `GlassCard` treatment — the
 /// restyle is deliberately not glassy.
 ///
+/// The fill is `Theme.surface`; the top edge carries a hairline of light
+/// (`View.ocrTopEdgeHighlight(_:)`). That hairline is the whole difference
+/// between an authored card and a rounded rectangle — it makes the card read
+/// as a plane tilted into the same light the hero panel is lit by, rather than
+/// as an untreated flat fill. It is light caught on an edge, not a border: the
+/// ramp is clear well before the bottom, so there is never a closed outline.
+///
 /// `padding: 0` is the escape hatch for row groups whose dividers have to run
-/// edge to edge; those rows own their own horizontal inset.
+/// edge to edge; those rows own their own horizontal inset. The highlight is an
+/// overlay on the card's own shape, so it survives that case unchanged.
 struct OCRCard<Content: View>: View {
     var corner: CGFloat = Theme.cardCorner
     var padding: CGFloat = 18
@@ -15,6 +23,7 @@ struct OCRCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.surface, in: .rect(cornerRadius: corner))
+            .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: corner))
     }
 }
 
@@ -31,6 +40,68 @@ struct OCRSectionLabel: View {
             .font(.ocrSectionLabel())
             .foregroundStyle(Theme.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The pair of concentric outlines that bleed off the top-right of every
+/// gradient panel, echoing the radar rings in the app mark.
+///
+/// Home's hero draws two, and it is the screen the direction singled out; the
+/// bands and sheets used to draw only one, which is why they read as a reduced
+/// version of the hero instead of the same idea at another size. Two rings is
+/// the difference between "a circle" and "a radar".
+///
+/// The pair is genuinely **concentric** — the inner ring's offset is derived
+/// from the outer's rather than eyeballed, because two circles that nearly
+/// share a centre read as a mistake where two that exactly share one read as a
+/// motif. `scale` is the hero's own ratio (130/230 ≈ 0.565).
+///
+/// Both rings sit at `white 14%`, the value the hero and every existing band
+/// already use. Purely decorative; the caller hides the whole background layer
+/// from VoiceOver.
+struct OCRPanelRings: View {
+    var outerDiameter: CGFloat
+    /// Offset of the outer ring from the panel's top-*trailing* corner. The
+    /// ring is expected to bleed: positive `width` pushes it off the right
+    /// edge, negative `height` above the top, and the panel's clip trims it.
+    var outerOffset: CGSize
+    var scale: CGFloat = 0.565
+    var opacity: Double = 0.14
+
+    private var innerDiameter: CGFloat { (outerDiameter * scale).rounded() }
+
+    /// In a `.topTrailing` stack a circle of diameter `d` at offset `x` has its
+    /// centre at `x - d / 2` from the trailing edge, and at `y + d / 2` from
+    /// the top. Solving both for the outer ring's centre gives the inner one.
+    private var innerOffset: CGSize {
+        CGSize(
+            width: outerOffset.width - (outerDiameter - innerDiameter) / 2,
+            height: outerOffset.height + (outerDiameter - innerDiameter) / 2
+        )
+    }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            // Fills the panel so both rings anchor to its top-right corner
+            // rather than to each other's frames.
+            Color.clear
+            ring(diameter: outerDiameter, offset: outerOffset)
+            ring(diameter: innerDiameter, offset: innerOffset)
+        }
+        // Decorative and inert. `Color.clear` is hit-testable in SwiftUI, so
+        // without this the panel-filling spacer above would be a live surface
+        // sitting across every gradient header — the same rule
+        // `ocrTopEdgeHighlight`, `ocrPanelSpill` and `OCRAmbientBackground`
+        // already keep.
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func ring(diameter: CGFloat, offset: CGSize) -> some View {
+        Circle()
+            .strokeBorder(.white.opacity(opacity), lineWidth: 1)
+            .frame(width: diameter, height: diameter)
+            .offset(x: offset.width, y: offset.height)
     }
 }
 
@@ -61,18 +132,17 @@ struct OCRHeaderBand<Trailing: View>: View {
             .background {
                 ZStack(alignment: .topTrailing) {
                     Theme.band
-                    // Decorative ring echoing the logo's radar rings — bleeds
-                    // 56 off the right edge and 52 above the top, trimmed by
-                    // the outer clip.
-                    Circle()
-                        .strokeBorder(.white.opacity(0.14), lineWidth: 1)
-                        .frame(width: 190, height: 190)
-                        .offset(x: 56, y: -52)
+                    OCRPanelRings(outerDiameter: 190, outerOffset: CGSize(width: 56, height: -52))
                 }
                 .accessibilityHidden(true)
             }
             .clipShape(.rect(bottomLeadingRadius: Theme.bandCorner,
                              bottomTrailingRadius: Theme.bandCorner))
+            // The band's bottom edge used to be a hard chromatic cut: the
+            // gradient's light end straight onto the ink. It now spills a
+            // little of its own light down onto the canvas, which is what makes
+            // it read as lit rather than pasted on.
+            .ocrPanelSpill()
             .foregroundStyle(.white)
     }
 
@@ -227,15 +297,16 @@ struct OCRSheetHeader: View {
         .background {
             ZStack(alignment: .topTrailing) {
                 Theme.hero
-                Circle()
-                    .strokeBorder(.white.opacity(0.14), lineWidth: 1)
-                    .frame(width: 220, height: 220)
-                    .offset(x: 70, y: -56)
+                OCRPanelRings(outerDiameter: 220, outerOffset: CGSize(width: 70, height: -56))
             }
             .accessibilityHidden(true)
         }
         .clipShape(.rect(bottomLeadingRadius: Theme.heroCorner,
                          bottomTrailingRadius: Theme.heroCorner))
+        // Same lit bottom edge as the header bands — the sheet's own canvas
+        // picks up a little of the header's light instead of butting against
+        // the gradient's lightest stop.
+        .ocrPanelSpill()
         .foregroundStyle(.white)
     }
 }
@@ -246,6 +317,16 @@ struct OCRSheetHeader: View {
 /// `title` and `message` are always supplied in full by the caller; the two
 /// sheets word this differently and neither wording may be shortened.
 struct OCRDemoNotice: View {
+    /// `Theme.noticeBorder` with `Theme.surfaceEdge` composited over it:
+    /// `#302B3B` + white 7% = `#3E3A49`, L\* 25.4 against the border's 18.7.
+    /// One rung of the ink ladder, the same step the cards' top edge takes.
+    ///
+    /// The notice is the one card in the app with no fill, so it cannot use
+    /// `ocrTopEdgeHighlight` — a translucent white hairline drawn over the
+    /// canvas lands *below* the border it is meant to be lighting. It gets the
+    /// same idea as an opaque ramp on the outline itself instead.
+    private static let litBorder = Color(hex: 0x3E3A49)
+
     let title: String
     let message: String
 
@@ -258,14 +339,34 @@ struct OCRDemoNotice: View {
                 .accessibilityHidden(true)
             copy
         }
-        .lineSpacing(4)
+        // The design's body line-height, named as the ratio it is rather than
+        // as the 4pt literal that happens to produce it at 13.5.
+        .ocrBodyLeading(size: 13.5)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, Theme.spacingM)
         .padding(.horizontal, 18)
         .overlay {
+            // Lit at the top, settling to `noticeBorder` by a third of the way
+            // down: the outline is the notice's only surface treatment, so it
+            // is where the card's light has to happen.
             RoundedRectangle(cornerRadius: Theme.rowCorner)
-                .strokeBorder(Theme.noticeBorder, lineWidth: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: Self.litBorder, location: 0),
+                            .init(color: Theme.noticeBorder, location: 0.35)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+                // Decorative and inert, matching every other decorative layer
+                // in the pass: it is an overlay, so it must not intercept a tap
+                // meant for whatever the notice is stacked with.
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .accessibilityElement(children: .combine)
     }

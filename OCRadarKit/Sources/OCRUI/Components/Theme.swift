@@ -6,32 +6,117 @@ import SwiftUI
 /// from `design/README.md`, where every contrast ratio was measured — in
 /// particular the third gradient stop must stay at `#96554F`, because at the
 /// earlier `#D08A6E` white labels measured 2.8–3.7:1.
+///
+/// # The ink family
+///
+/// The handoff's neutral ramp started at `#000000`. Pure black is the one colour
+/// every dark app inherits for free, so it reads as un-chosen; the ramp is now a
+/// **violet ink** whose hue is pulled from the hero gradient's deep stop
+/// (`#4B2E8F`, hue 258°). Every dark surface — canvas, cards, raised chips,
+/// dividers, the camera stage, the radar rings — sits at that same hue,
+/// 253–260°, so they read as one family rather than a mix of tinted and
+/// leftover-neutral planes.
+///
+/// **The bias is a whisper, not a wash.** The hero indigo is 51% saturated; the
+/// ink runs 12–21%, and the greys 8–9%. Against true black the tint is plainly
+/// there; on its own it reads as a very dark neutral. A *content* surface that
+/// looks purple in a screenshot has overshot and is a bug.
+///
+/// Saturated purple is spent in four places and nowhere else: the gradient
+/// hero and header bands, the newest-scan avatar, the Scan control, and the
+/// floating tab bar. The last is the one deliberate exception to the whisper
+/// rule — it is chrome rather than content, and it is argued for at
+/// `chromeTint`.
+///
+/// # How the ramp was re-derived
+///
+/// Lifting the floor from `#000000` (L\* 0) to `#0F0D14` (L\* 4.0) compresses
+/// every step above it, because the handoff's spacing assumed a zero floor.
+/// Each surface was therefore re-solved at hue 256° for a target CIE **L\***, not
+/// picked by eye: `new = 4.0 + 0.85 × old`. The 0.85 keeps the app as dark as it
+/// was designed to be while preserving the *order* and near-preserving the size
+/// of every plane change (`canvas → surface` 6.0 → 5.1, `surface → divider`
+/// 5.5 → 4.9, `surface → surfaceRaised` 9.4 → 7.8). Contrast ratios below are
+/// WCAG 2.x relative luminance, computed, not estimated.
+///
+/// The resulting ladder, darkest first:
+/// `stageFill` 2.7 · `canvas` 4.0 · `surface` 9.1 · `stageBorder` 12.7 ·
+/// `divider` 14.0 · `surfaceRaised` 16.8 · `radarRing` 16.9 ·
+/// `noticeBorder` 18.7. The floating chrome sits off this ladder on purpose —
+/// see `chromeTint`.
 nonisolated enum Theme {
-    // MARK: Colour
-    static let canvas = Color.black
-    static let surface = Color(hex: 0x131316)
-    static let surfaceRaised = Color(hex: 0x26262C)
-    static let tabBarFill = Color(hex: 0x16161A)
-    static let divider = Color(hex: 0x1E1E24)
+    // MARK: Colour — the violet-ink family (hue 253–260°, sat 12–21%)
+    //
+    // Text ratios are measured against the surfaces text actually lands on.
+    // `design/README.md`'s floors still hold: body text ≥ 4.5:1, and
+    // `textTertiary` is the lightest colour allowed to carry text.
 
-    static let textPrimary = Color.white
-    static let textSecondary = Color(hex: 0x8E8E93)   // 6.44:1 on black
-    static let textTertiary = Color(hex: 0x76767E)    // 4.60:1 on black — lightest allowed for text
+    static let canvas = Color(hex: 0x0F0D14)          // L* 4.0 — was #000000
+    static let surface = Color(hex: 0x1B1823)         // L* 9.1 — cards, list groups
+    static let surfaceRaised = Color(hex: 0x2C2737)   // L* 16.8 — chips, tracks, tab pill
+    static let divider = Color(hex: 0x25222D)         // L* 14.0 — hairlines inside cards
+
+    static let textPrimary = Color.white              // 19.30:1 canvas · 17.48:1 surface
+    /// Body copy, labels, meta. 6.58:1 on `canvas`, 5.96:1 on `surface`,
+    /// 4.93:1 on `surfaceRaised` — clears 4.5:1 on every surface in the app.
+    static let textSecondary = Color(hex: 0x9A94A6)
+    /// Footnotes and the disclaimer; the lightest colour allowed for text.
+    /// 5.25:1 on `canvas`, 4.76:1 on `surface`, 5.39:1 on `stageFill` — the
+    /// three surfaces it is actually drawn on. Lightened from `#76767E`, which would have fallen
+    /// to 4.29:1 / 3.88:1 on the new ramp — under the floor on both.
+    /// It is never drawn on `surfaceRaised` (3.93:1) and must not be.
+    static let textTertiary = Color(hex: 0x8A8296)
+    /// Large numerals on non-highlighted rows. Unchanged — it already carried
+    /// the family's faint bias, and it reads everywhere: 14.12:1 on `surface`,
+    /// 11.68:1 on `surfaceRaised` (the History avatar), 15.59:1 on `canvas`.
     static let numeralMuted = Color(hex: 0xE8E6EC)
-    static let chevron = Color(hex: 0x5A5A62)
+    /// Disclosure chevrons. A non-text control, so the floor is 3:1 — which the
+    /// old `#5A5A62` met on black (3.07:1) but *not* on the card it is actually
+    /// drawn on (2.71:1 on the old `surface`, and 2.83:1 on the new one).
+    /// `#716B7E` measures 3.42:1 on `surface` and 3.77:1 on `canvas`.
+    static let chevron = Color(hex: 0x716B7E)
 
-    static let accent = Color(hex: 0xC77BE8)
+    static let accent = Color(hex: 0xC77BE8)          // 6.18:1 on surface
     static let accentHover = Color(hex: 0xDBA5F0)     // link pressed
     static let salmon = Color(hex: 0xE39B7B)          // data only, never behind text
     static let mint = Color(hex: 0x5FD3A6)            // live-model indicator
 
-    static let stageFill = Color(hex: 0x0C0C0F)
-    static let stageBorder = Color(hex: 0x1C1C22)
-    static let radarRing = Color(hex: 0x26262E)
+    /// Camera stage. The one surface deliberately taken *below* `canvas`
+    /// (L\* 2.7 vs 4.0) rather than up the ladder: `ScanView` uses it at 50%
+    /// as the glass tint over the live frame, where every unit of darkness is
+    /// legibility. Held against a bright review frame the tint composites a
+    /// hair *darker* than `#0C0C0F` did, so `ScanView`'s measured pill and
+    /// capsule ratios are preserved, not eroded. The stage now reads as a well
+    /// cut into the page instead of a panel raised off it.
+    static let stageFill = Color(hex: 0x0B0910)
+    static let stageBorder = Color(hex: 0x231F2C)     // L* 12.7 — 10.0 above stageFill
+    static let radarRing = Color(hex: 0x2C2738)       // L* 16.9 — matches surfaceRaised
 
     /// Outline of the demo notice card — a hair above `divider` so the card
     /// reads as outlined rather than filled.
-    static let noticeBorder = Color(hex: 0x2A2A2E)
+    static let noticeBorder = Color(hex: 0x302B3B)
+
+    // MARK: Signature — the three tokens that carry the hero's language outward.
+    //
+    // The hero panel is the best thing in the app; these exist so the rest of it
+    // can speak the same language without repeating the gradient. All three are
+    // deliberately below the threshold of "an effect you can point at" — if a
+    // first-time user can name one of them, it is turned up too far.
+
+    /// A lit hairline for the top edge of a card, so a surface reads as a
+    /// tilted plane catching light rather than an untreated flat rectangle.
+    ///
+    /// White at 7%: `+7.7` L\* over `surface`, `+6.9` over `surfaceRaised` —
+    /// about one rung of the ink ladder, which is exactly a hairline's worth.
+    /// Draw it as a 1px stroke or a top-aligned gradient stop, never as a full
+    /// border; a closed outline reads as system chrome, which is the enemy.
+    static let surfaceEdge = Color.white.opacity(0.07)
+
+    /// Optional film-grain overlay. White at 2% — at full strength one grain
+    /// speck lifts `canvas` by `1.9` L\*, so the texture registers as tooth on
+    /// the ink rather than as visible noise. Apply with `.blendMode(.plusLighter)`
+    /// over large flat fields only, and never over text.
+    static let grain = Color.white.opacity(0.02)
 
     // MARK: Gradients — sampled from the ocrnew logo asset.
     //
@@ -64,6 +149,31 @@ nonisolated enum Theme {
     static var band: OCRGradient { OCRGradient(stops: bandStops) }
     /// Filled buttons, shutter, History avatar for the newest scan.
     static var button: OCRGradient { OCRGradient(stops: buttonStops) }
+
+    /// Ambient glow behind a screen's content: the hero's deep indigo, radiating
+    /// from just off the top edge and gone before it reaches the bottom. It is
+    /// how a screen without a gradient panel still feels lit by the same source
+    /// as the ones that have one.
+    ///
+    /// Peak is 9% — over `canvas` that lands at L\* 5.6, which is *below*
+    /// `surface` (9.1), so a card never dissolves into the glow it sits in. Text
+    /// survives the worst case, a card centred under the peak: `textSecondary`
+    /// 5.76:1 and `textTertiary` 4.59:1 on the bloomed `surface`, both still
+    /// over the 4.5:1 floor.
+    ///
+    /// A fixed `endRadius` rather than a relative one, so the falloff is the
+    /// same physical size on a tall scroll view and a short sheet instead of
+    /// stretching with the frame. Use it as a full-bleed `.background`.
+    static let bloom = RadialGradient(
+        stops: [
+            .init(color: Color(hex: 0x4B2E8F).opacity(0.09), location: 0),
+            .init(color: Color(hex: 0x4B2E8F).opacity(0.035), location: 0.5),
+            .init(color: Color(hex: 0x4B2E8F).opacity(0), location: 1)
+        ],
+        center: UnitPoint(x: 0.5, y: 0.04),
+        startRadius: 0,
+        endRadius: 460
+    )
 
     /// Fill of the Result sheet's top-class bar only. Horizontal, unlike the
     /// diagonal surface gradients.
@@ -99,6 +209,36 @@ nonisolated enum Theme {
     static func onGradient(_ opacity: Double = 1) -> Color {
         .white.opacity(max(opacity, 0.92))
     }
+
+    // MARK: Chrome — the floating tab bar's two glass surfaces.
+    //
+    // These are the one place the ink family is deliberately pushed past a
+    // whisper of violet into an actual purple, because the tab bar is chrome,
+    // not a content surface: it floats over the page rather than carrying it,
+    // so it is read as an object in its own right and a neutral one reads as
+    // the system's, not the app's.
+    //
+    // The values are picked for what the *material resolves to*, not for how
+    // they look as swatches. Regular glass contributes a large near-neutral
+    // lift — measured at roughly `#3A3642` on this app's canvas — so the tint
+    // must be far more saturated than the intended result. Composited, a 60%
+    // `chromeTint` lands at about `#2D2549` (hue 258°, saturation 49%) where
+    // the ink family's own near-neutral landed at `#292531` (saturation 24%, and
+    // plainly grey on screen). Same hue as the ink family; enough chroma to
+    // read as chosen.
+
+    /// Glass tint for the navigation pill (Settings · Home · History), used at
+    /// 60%. Resolves to roughly `#2D2549`.
+    static let chromeTint = Color(hex: 0x241A4E)
+
+    /// Flat fill the navigation pill returns to under Reduce Transparency —
+    /// the value the glass resolves to, so turning the setting on changes the
+    /// material without changing the colour the user learned.
+    static let chromeFill = Color(hex: 0x2D2549)
+
+    // The Scan circle needs no token of its own: it is a solid `Theme.button`
+    // gradient disc, the same fill as the shutter. See `OCRTabBar.scanButton`
+    // for why the chrome's action surface is deliberately not glass.
 
     // MARK: Radii
     static let heroCorner: CGFloat = 34

@@ -129,9 +129,15 @@ struct OCRRadar: View {
         }
     }
 
+    /// The empty-state glyph's centre. The design's `#4A4A52` was a neutral
+    /// grey, which now reads as a leftover next to the violet-ink ramp around
+    /// it. `#4D485A` is the same lightness (L\* 31.7 either way) re-solved at
+    /// the family's hue, so the dot changed family without changing weight.
+    private static let centreDotColor = Color(hex: 0x4D485A)
+
     private var centreDot: some View {
         Circle()
-            .fill(Color(hex: 0x4A4A52))
+            .fill(Self.centreDotColor)
             .frame(width: radius * 0.182, height: radius * 0.182)
     }
 

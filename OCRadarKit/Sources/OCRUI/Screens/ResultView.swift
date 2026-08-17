@@ -23,11 +23,6 @@ struct ResultView: View {
     @Environment(\.lesionClassifier) private var classifier
     @Environment(\.dismiss) private var dismiss
 
-    /// Vertical rhythm inside the sheet body, measured from the design.
-    private let afterNotice: CGFloat = 22
-    private let betweenCards: CGFloat = 16
-    private let beforeFootnote: CGFloat = 18
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -46,7 +41,7 @@ struct ResultView: View {
         // is worth softening. `SheetBodyInsets` pads 44 below the disclaimer,
         // which keeps the last line clear of the dissolve.
         .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .background(Theme.canvas)
+        .background { OCRAmbientBackground() }
         .foregroundStyle(Theme.textPrimary)
         .presentationBackground(Theme.canvas)
         .presentationCornerRadius(Theme.sheetCorner)
@@ -80,11 +75,17 @@ struct ResultView: View {
 
     // MARK: - Body
 
+    /// One gap, `Theme.spacingL`, between every sibling on the sheet.
+    ///
+    /// This body used to declare three private constants (22 / 16 / 18) on top
+    /// of a 26pt top pad, so the gaps shrank monotonically down the page — 26,
+    /// 22, 16 — for no reason a reader could name. Settings runs a single
+    /// `spacingL` between every one of its groups and measures dead even, which
+    /// is the rhythm this now shares.
     private func content(for top: LabelScore) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: Theme.spacingL) {
             if result.isDemoResult {
                 demoNotice
-                    .padding(.bottom, afterNotice)
             }
 
             // The per-class medical summary is withheld for demo results:
@@ -93,14 +94,11 @@ struct ResultView: View {
             if !result.isDemoResult,
                let summary = classifier.manifest.classInfo(forID: top.id)?.summary {
                 summaryCard(summary)
-                    .padding(.bottom, betweenCards)
             }
 
             allClassesCard
-                .padding(.bottom, betweenCards)
 
             professionalCallout(for: top)
-                .padding(.bottom, beforeFootnote)
 
             disclaimerFootnote
         }
@@ -110,26 +108,22 @@ struct ResultView: View {
     /// A result with no scores still has to render something sane and
     /// dismissible — the header's Done button remains the way out.
     private var emptyScoresContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: Theme.spacingL) {
             if result.isDemoResult {
                 demoNotice
-                    .padding(.bottom, afterNotice)
             }
 
-            OCRCard(corner: Theme.panelCorner, padding: 20) {
+            OCRCard(corner: Theme.panelCorner) {
                 Text("The analysis returned no scores. Try another photo.")
                     .font(.ocrBody())
                     .foregroundStyle(Theme.textSecondary)
-                    .lineSpacing(3)
+                    .ocrBodyLeading(size: 14.5)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
             }
-            .padding(.bottom, betweenCards)
 
             // With no top score there is no tier, so only the generic
             // when-in-doubt guidance can apply.
             genericCallout
-                .padding(.bottom, beforeFootnote)
 
             disclaimerFootnote
         }
@@ -147,20 +141,24 @@ struct ResultView: View {
     }
 
     private func summaryCard(_ summary: String) -> some View {
-        OCRCard(corner: Theme.panelCorner, padding: 20) {
+        OCRCard(corner: Theme.panelCorner) {
             Text(summary)
                 .font(.ocrBody())
                 .foregroundStyle(Theme.textSecondary)
-                .lineSpacing(3)
+                .ocrBodyLeading(size: 14.5)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
         }
     }
 
     // MARK: - All classes
 
+    /// `OCRCard`'s own 18pt inset, on all four sides, like every other card in
+    /// the app. The four cards on this sheet used to pass `padding: 20`, which
+    /// put their first pixel of content 2pt right of the demo notice stacked
+    /// 22pt above them — the two cards' contents were on different rails inside
+    /// one column.
     private var allClassesCard: some View {
-        OCRCard(corner: Theme.panelCorner, padding: 20) {
+        OCRCard(corner: Theme.panelCorner) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("All classes")
                     .font(.ocrCardTitle())
@@ -180,7 +178,6 @@ struct ResultView: View {
                     }
                 }
             }
-            .padding(.vertical, 2)
         }
     }
 
@@ -209,25 +206,28 @@ struct ResultView: View {
     }
 
     private func calloutCard(title: String, detail: String) -> some View {
-        OCRCard(corner: Theme.panelCorner, padding: 20) {
+        OCRCard(corner: Theme.panelCorner) {
+            // `iconGap`-wide, icon-rail layout — the same shape the Settings
+            // rows and the Privacy card use. The stethoscope was the one accent
+            // glyph in the app at 21pt while every other sat at 19, so the one
+            // icon a user meets on the result of a scan was the odd one out.
             VStack(alignment: .leading, spacing: 9) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Image(systemName: "stethoscope")
-                        .font(.system(size: 21))
-                        .foregroundStyle(Theme.accent)
-                        .accessibilityHidden(true)
+                // 14, the gap Settings puts between the same glyph box and the
+                // same kind of title. At 12 it was the app's second
+                // icon-to-title distance.
+                HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    OCRRowIcon(systemName: "stethoscope", titleSize: 16.5)
                     Text(title)
-                        .font(.system(size: 16.5, weight: .semibold))
+                        .font(.ocrCardTitle())
                         .tracking(-0.25)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(detail)
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.textSecondary)
-                    .lineSpacing(3)
+                    .ocrBodyLeading(size: 14)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.vertical, 2)
         }
         .accessibilityElement(children: .combine)
     }
@@ -238,7 +238,7 @@ struct ResultView: View {
         Text(MedicalDisclaimer.full)
             .font(.ocrFootnote())
             .foregroundStyle(Theme.textTertiary)
-            .lineSpacing(4)
+            .ocrFootnoteLeading(size: 13)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -249,7 +249,9 @@ private struct SheetBodyInsets: ViewModifier {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.pageMargin)
-            .padding(.top, Theme.pageMargin)
+            // `spacingL`, so the header-to-first-card step is the same gap as
+            // every step between the cards below it.
+            .padding(.top, Theme.spacingL)
             .padding(.bottom, 44)
     }
 }

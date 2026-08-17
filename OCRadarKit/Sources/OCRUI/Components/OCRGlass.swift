@@ -11,9 +11,10 @@ import SwiftUI
 /// their contrast against a known fill, and glass would put that measurement at
 /// the mercy of whatever scrolls behind it.
 ///
-/// **Always `.regular`, never `.clear`.** The canvas is true black and the
-/// camera stage is `#0C0C0F`; clear glass over that has essentially nothing to
-/// refract and renders as an all-but-invisible smudge. Regular glass keeps its
+/// **Always `.regular`, never `.clear`.** The canvas is `Theme.canvas`
+/// (`#0F0D14`) and the camera stage `Theme.stageFill` (`#0B0910`); clear glass
+/// over ink that dark has essentially nothing to refract and renders as an
+/// all-but-invisible smudge. Regular glass keeps its
 /// own luminance adaptation and specular edge, which is what holds these labels
 /// above the spec's 4.5:1 floor over both black and a bright camera frame.
 ///

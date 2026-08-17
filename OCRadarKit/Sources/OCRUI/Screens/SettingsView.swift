@@ -5,16 +5,17 @@ import SwiftUI
 /// privacy statement, support contact, app info, and the full medical
 /// disclaimer.
 ///
-/// Built by hand rather than with a grouped `List` — the design calls for
-/// flat opaque cards on a true-black canvas under a gradient header band.
+/// Built by hand rather than with a grouped `List`. This is the screen a
+/// stock `Form` would have been easiest on and would have hurt most: inset
+/// grouped styling is the single most recognisable "iOS default" surface there
+/// is, and it would have put Apple's grey plates and full-width hairlines on
+/// the one screen that is nothing but plates and hairlines. Every group here is
+/// an ink card with a lit top edge and its own inset hairlines, under the
+/// gradient header band.
 struct SettingsView: View {
     @Environment(\.lesionClassifier) private var classifier
 
     @State private var isShowingDisclaimer = false
-
-    /// Clears the floating tab bar (62 tall, 30 from the bottom) plus a
-    /// comfortable gap so the last row is never trapped underneath it.
-    private let bottomClearance: CGFloat = 130
 
     private let supportURL = URL(string: "mailto:contact@ocradar.com")
 
@@ -37,17 +38,24 @@ struct SettingsView: View {
                     footnote
                 }
                 .padding(.horizontal, Theme.pageMargin)
-                .padding(.top, Theme.pageMargin)
-                .padding(.bottom, bottomClearance)
+                // `spacingL`, the same value Home and History now put under
+                // their headers and the same one this stack already uses
+                // between its groups. Three tabs used to name this one
+                // relationship three ways (34 / 26 / 24), so the first line of
+                // content jumped as the user moved between them.
+                .padding(.top, Theme.spacingL)
+                .padding(.bottom, Theme.tabBarClearance)
             }
         }
         .scrollIndicators(.hidden)
         .ocrQAScrollBottom()
         // Gradient band at the top, floating tab bar at the bottom — top edge
         // effect off at rest and back once the page scrolls, bottom one soft.
-        // `bottomClearance` still keeps the footnote reachable above the bar.
+        // `Theme.tabBarClearance` still keeps the footnote reachable above the
+        // bar — the effect changes how content looks under the chrome, not
+        // whether it can be reached.
         .ocrScrollEdges()
-        .background(Theme.canvas)
+        .background { OCRAmbientBackground() }
         .sheet(isPresented: $isShowingDisclaimer) {
             // Honesty rule 4: the copy is `MedicalDisclaimer.full` and nothing
             // else. Titled "Medical disclaimer" with a "Done" footer, not the
@@ -118,26 +126,33 @@ struct SettingsView: View {
 
     // MARK: - Privacy
 
+    /// The one card on this screen whose copy hangs *under* its title rather
+    /// than beside it, so it is the one that has to state the icon rail
+    /// explicitly instead of getting it from `SettingsValueRow`.
+    ///
+    /// It used to indent the title by a bare `HStack` and leave the paragraph on
+    /// the card's own padding, which put a 31pt ragged edge inside a single card
+    /// and set the title ~3pt off the rail every other row on the screen sits
+    /// on. Title and body now both hang off `SettingsMetrics.iconRowInset`, the
+    /// same rail the dividers two cards above are drawn to.
     private var privacyGroup: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
             OCRSectionLabel("Privacy")
             OCRCard {
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "lock.shield")
-                            .font(.system(size: 19))
-                            .foregroundStyle(Theme.accent)
-                            .accessibilityHidden(true)
+                HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
+                    OCRRowIcon(systemName: "lock.shield")
+                    VStack(alignment: .leading, spacing: 9) {
                         Text("On-device only")
                             .font(.system(size: 16, weight: .semibold))
                             .tracking(-0.2)
                             .foregroundStyle(Theme.textPrimary)
+                        Text("All analysis happens on this device. Photos and results never leave your iPhone unless you share them.")
+                            .font(.system(size: 14))
+                            .ocrBodyLeading(size: 14)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text("All analysis happens on this device. Photos and results never leave your iPhone unless you share them.")
-                        .font(.system(size: 14))
-                        .lineSpacing(7)
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .accessibilityElement(children: .combine)
             }
@@ -190,7 +205,9 @@ struct SettingsView: View {
     private var footnote: some View {
         Text(MedicalDisclaimer.short)
             .font(.ocrFootnote())
-            .lineSpacing(8)
+            // The same string Home sets. It used to run at 1.81 here and 1.50
+            // there; both now run at the type table's footnote ratio.
+            .ocrFootnoteLeading(size: 13)
             .foregroundStyle(Theme.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, Theme.spacingXS)
@@ -208,9 +225,16 @@ struct SettingsView: View {
 
 // MARK: - Row primitives
 
-private nonisolated enum SettingsMetrics {
+/// Main-actor isolated (the module default) rather than `nonisolated`, because
+/// `iconWidth` is derived from `OCRRowIcon.box` rather than re-declaring the
+/// number beside it. Every reader is a view body, so the isolation costs
+/// nothing and the rail can only have one definition.
+private enum SettingsMetrics {
     static let horizontalPadding: CGFloat = 18
-    static let iconWidth: CGFloat = 21
+    /// The shared optical rail every leading glyph in the app is drawn in, so
+    /// this screen's divider inset is derived from the icon rather than
+    /// re-declared beside it.
+    static let iconWidth: CGFloat = OCRRowIcon.box
     static let iconGap: CGFloat = 14
     /// 18 + 21 + 14 — a divider between rows that carry a leading icon
     /// starts where the row's text starts.
@@ -220,19 +244,20 @@ private nonisolated enum SettingsMetrics {
 }
 
 /// A 54pt list row: optional leading accent icon, title, trailing value.
+///
+/// Baseline-aligned rather than centre-aligned, which is what lets the leading
+/// glyph anchor to the title's cap band instead of to the row box. On a
+/// single-line row the two land in the same place; the alignment is what keeps
+/// that true when Dynamic Type grows the title past the glyph.
 private struct SettingsValueRow: View {
     let icon: String?
     let title: String
     let value: String
 
     var body: some View {
-        HStack(spacing: SettingsMetrics.iconGap) {
+        HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
             if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 19))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: SettingsMetrics.iconWidth)
-                    .accessibilityHidden(true)
+                OCRRowIcon(systemName: icon)
             }
             Text(title)
                 .font(.ocrRowTitle())
@@ -241,6 +266,10 @@ private struct SettingsValueRow: View {
             Spacer(minLength: Theme.spacingS)
             Text(value)
                 .font(.system(size: 16))
+                // "1.0 (1)" and "© 2026 OCRadar" sit one above the other in a
+                // right-aligned column, which is exactly the case the design's
+                // monospaced-digit rule is about.
+                .monospacedDigit()
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.trailing)
         }
@@ -251,30 +280,30 @@ private struct SettingsValueRow: View {
 }
 
 /// A 54pt list row that goes somewhere: leading accent icon, title, chevron.
+///
+/// Structurally identical to `SettingsValueRow` — same alignment, same gap,
+/// same padding, same height expression — with the trailing value replaced by
+/// the app's one disclosure chevron. The two used to state their height
+/// differently (`max(rowHeight, minTarget)` against `rowHeight`) for the same
+/// 54pt result, which is the kind of difference that survives a refactor and
+/// then stops being the same number.
 private struct SettingsNavigationRow: View {
     let icon: String
     let title: String
 
     var body: some View {
-        HStack(spacing: SettingsMetrics.iconGap) {
-            Image(systemName: icon)
-                .font(.system(size: 19))
-                .foregroundStyle(Theme.accent)
-                .frame(width: SettingsMetrics.iconWidth)
-                .accessibilityHidden(true)
+        HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
+            OCRRowIcon(systemName: icon)
             Text(title)
                 .font(.ocrRowTitle())
                 .tracking(-0.2)
                 .foregroundStyle(Theme.textPrimary)
             Spacer(minLength: Theme.spacingS)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.chevron)
-                .accessibilityHidden(true)
+            OCRChevron()
         }
         .padding(.horizontal, SettingsMetrics.horizontalPadding)
-        .frame(minHeight: max(Theme.rowHeight, Theme.minTarget))
-        .contentShape(Rectangle())
+        .frame(minHeight: Theme.rowHeight)
+        .contentShape(.rect)
     }
 }
 

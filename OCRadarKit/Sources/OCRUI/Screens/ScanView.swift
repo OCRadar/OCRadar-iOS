@@ -17,19 +17,21 @@ import UIKit
 ///
 /// This is the one screen where Liquid Glass earns its keep: the controls float
 /// over a live camera feed or a captured photo, so there is real content for the
-/// glass to refract. Four surfaces qualify — the status pill, the library
-/// circle, the shutter ring and the analyzing capsule. The gradient band above,
-/// the stage itself and the three camera-fallback layouts stay flat and opaque,
-/// exactly as `design/README.md` specifies, and so do "Retake" and "Analyze":
-/// see `reviewActions(for:)` for the measurement that put them back.
+/// glass to refract. Five surfaces qualify — the status pill, the framing
+/// caption, the library circle, the shutter ring and the analyzing capsule. The
+/// gradient band above, the stage itself and the three camera-fallback layouts
+/// stay flat and opaque, exactly as `design/README.md` specifies, and so do
+/// "Retake" and "Analyze": see `reviewActions(for:)` for the measurement that
+/// put them back.
 ///
 /// Every glass surface here carries a tint rather than being left bare, because
 /// "adapts to its backdrop" cuts both ways — the backdrop can also be a
 /// blown-out photograph, and untinted glass follows it straight up into the
-/// label. The two that must hold a white label over an arbitrary photo, the
-/// status pill and the analyzing capsule, are tinted toward `stageFill`; the
-/// shutter ring keeps the accent, since its solid gradient core carries the
-/// control whatever the ring does. The per-surface numbers are on each one.
+/// label. The three that must hold a light label over an arbitrary frame — the
+/// status pill, the framing caption and the analyzing capsule — are tinted
+/// toward `stageFill`; the shutter ring keeps the accent, since its solid
+/// gradient core carries the control whatever the ring does. The per-surface
+/// numbers are on each one.
 ///
 /// The material itself is `ocrGlass(_:...)` in `Components/OCRGlass.swift`, so
 /// this screen, the tab bar and the sheet headers cannot drift into three
@@ -47,11 +49,11 @@ import UIKit
 /// measured on the `-qaScanStage review` frame, the pill's `numeralMuted` label
 /// falls to 3.17:1 and the capsule's white label to 3.31:1, against 7.50:1 and
 /// 8.07:1 on the glass path. Turning an accessibility setting **on** must not
-/// make those labels harder to read. `surfaceRaised` (`#26262C`) is opaque, so
-/// it is the one treatment whose contrast does not depend on the photograph at
-/// all: `numeralMuted` on it measures 12.2:1 and white 15.0:1, whatever is
-/// underneath. It is also the token "Retake" already uses on this same stage,
-/// for this same reason.
+/// make those labels harder to read. `surfaceRaised` (`#2C2737` since the ink
+/// pass) is opaque, so it is the one treatment whose contrast does not depend
+/// on the photograph at all: `numeralMuted` on it measures 11.68:1 and white
+/// 14.46:1, whatever is underneath. It is also the token "Retake" already uses
+/// on this same stage, for this same reason.
 struct ScanView: View {
     @Environment(\.lesionClassifier) private var classifier
     @Environment(\.modelContext) private var modelContext
@@ -77,6 +79,16 @@ struct ScanView: View {
     /// Height of the status pill, for the same reason as `actionHeight`.
     @ScaledMetric(relativeTo: .caption) private var pillHeight: CGFloat = 30
 
+    /// Height of a **lone** call to action, matching `OCRPrimaryButtonStyle`'s
+    /// own default and Home's hero capsule.
+    ///
+    /// The three camera-fallback stages used to pin their buttons at 50 — a
+    /// third height for one role, and the only one `design/README.md` never
+    /// names. They take this instead. `actionHeight` stays at the spec'd 52
+    /// because it is the paired Retake/Analyze row rather than a lone CTA, and
+    /// the two roles are now the only two capsule heights in the app.
+    private static let ctaHeight: CGFloat = 54
+
     /// Gap between the top of the stage and the top of the radar's box: the
     /// spec centres the radar at y 206 in stage coordinates, and the radar box
     /// is 250 tall.
@@ -84,10 +96,9 @@ struct ScanView: View {
 
     var body: some View {
         ZStack {
-            Theme.canvas
-                .ignoresSafeArea()
+            OCRAmbientBackground()
 
-            VStack(spacing: 16) {
+            VStack(spacing: Theme.spacingM) {
                 OCRHeaderBand(
                     title: "Scan",
                     subtitle: "Nothing leaves your iPhone",
@@ -148,8 +159,33 @@ struct ScanView: View {
         .background(Theme.stageFill)
         .clipShape(.rect(cornerRadius: Theme.stageCorner))
         .overlay {
+            // The design's 1px `stageBorder`, with the top arc lit by
+            // `surfaceEdge` and the light gone by 45% down. `stageFill` now
+            // sits *below* the canvas rather than above it, so the stage reads
+            // as a well cut into the page — and a well is lit along its top lip
+            // and dark along its floor. A flat border of one colour all the way
+            // round was the alternative, and a closed even outline is exactly
+            // what system chrome looks like.
             RoundedRectangle(cornerRadius: Theme.stageCorner)
-                .strokeBorder(Theme.stageBorder, lineWidth: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: Theme.surfaceEdge, location: 0),
+                            .init(color: Theme.stageBorder, location: 0.45)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+                // Decorative and inert, like every other decorative layer in
+                // the pass (`ocrTopEdgeHighlight`, `ocrPanelSpill`,
+                // `OCRAmbientBackground`). This one is an *overlay* on the
+                // stage, so it sits on top of the shutter, the library picker,
+                // Retake and Analyze — the one decorative layer most exposed to
+                // the rule.
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 
@@ -213,25 +249,46 @@ struct ScanView: View {
                 CameraPreview(service: camera)
                     .accessibilityHidden(true)
 
-                if !forcesLiveStage, camera.state == .idle || camera.state == .configuring {
-                    ProgressView()
-                        .controlSize(.large)
-                        .tint(Theme.accent)
-                }
-
                 VStack(spacing: 0) {
                     // Absorbs first so the framing aid keeps its 81pt offset on
                     // a tall stage and compresses on a short one.
                     Spacer(minLength: 0)
                         .frame(maxHeight: radarBoxTop)
 
-                    framingAid(diameter: radarDiameter(inStageHeight: proxy.size.height))
+                    framingAid(
+                        diameter: radarDiameter(inStageHeight: proxy.size.height),
+                        acquiring: isAcquiringCamera
+                    )
 
+                    // The one label on this stage that had no backdrop of its
+                    // own. `textSecondary` measures 6.75:1 over `stageFill`,
+                    // which is the number a dark stand-in stage gives it — but
+                    // this text is drawn on the *live frame*, and over a
+                    // blown-out one it measures **2.93:1**, under the 4.5:1
+                    // floor this file enforces on the pill (3.06:1 rejected),
+                    // the library circle (2.47:1) and the analyzing capsule
+                    // (2.47:1). It takes the treatment those established
+                    // instead: `numeralMuted` on `stageFill`-tinted glass —
+                    // ~7.4:1 on the same material the pill measures 7.50:1 on —
+                    // falling back to the opaque `surfaceRaised` (11.7:1) under
+                    // Reduce Transparency, exactly as they do.
+                    //
+                    // The plate hugs the copy rather than spanning the stage:
+                    // `Text` takes its ideal width, so the glass is only as wide
+                    // as the two lines and the framing view stays open.
                     Text("Frame the area that concerns you\nHold steady in good light")
                         .font(.system(size: 14))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Theme.numeralMuted)
                         .multilineTextAlignment(.center)
-                        .lineSpacing(3)
+                        .ocrBodyLeading(size: 14)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .ocrGlass(
+                            .rect(cornerRadius: Theme.rowCorner),
+                            tint: Theme.stageFill.opacity(0.5),
+                            fallback: Theme.surfaceRaised,
+                            reduceTransparency: reduceTransparency
+                        )
                         .padding(.horizontal, Theme.spacingL)
 
                     Spacer(minLength: Theme.spacingM)
@@ -269,10 +326,31 @@ struct ScanView: View {
     /// The design's 186pt reticle inside its 250pt radar box.
     private static let reticleRatio: CGFloat = 186 / 250
 
+    /// Whether the session is still coming up. This used to put a stock
+    /// `ProgressView` in the middle of the stage — a grey system spinner
+    /// floating on a dark rectangle, the single most borrowed-looking thing on
+    /// the screen, and redundant besides: the radar arm behind it was already
+    /// sweeping.
+    ///
+    /// The state is carried by the framing aid instead. See `framingAid`.
+    private var isAcquiringCamera: Bool {
+        guard !forcesLiveStage else { return false }
+        return camera.state == .idle || camera.state == .configuring
+    }
+
     /// Radar and reticle share one `ZStack`, so their centres coincide — the
     /// spec calls this out twice, and the reticle keeps its ratio to the radar
     /// when the radar is scaled down for a short stage.
-    private func framingAid(diameter: CGFloat) -> some View {
+    ///
+    /// `acquiring` is how this screen says "not ready yet" in its own
+    /// vocabulary rather than the system's. The radar sweeps from the moment
+    /// the stage appears; the four accent brackets — the element that means
+    /// *aim here* — only join it once the session is actually running. Acquire,
+    /// then lock. It costs no new copy, no new colour and no new motion: the
+    /// brackets are simply not drawn yet, so there is nothing here for Reduce
+    /// Motion to gate, and the shutter is independently disabled until the same
+    /// moment.
+    private func framingAid(diameter: CGFloat, acquiring: Bool) -> some View {
         ZStack {
             OCRRadar(diameter: diameter, sweeping: true)
                 .opacity(0.55)
@@ -280,6 +358,7 @@ struct ScanView: View {
             OCRReticle()
                 .frame(height: diameter * Self.reticleRatio)
                 .padding(.horizontal, 40)
+                .opacity(acquiring ? 0 : 1)
         }
         .frame(maxWidth: .infinity)
         .frame(height: diameter)
@@ -326,8 +405,12 @@ struct ScanView: View {
         // touched inside it. A captured `Bool` can.
         let isFlat = reduceTransparency
         return PhotosPicker(selection: $pickerItem, matching: .images) {
+            // `.medium` and monochrome, the app's one glyph treatment.
+            // `photo.on.rectangle` carries a hierarchical default, which drew
+            // its two plates at two densities inside a single 48pt control.
             Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 21))
+                .font(.system(size: 21, weight: .medium))
+                .symbolRenderingMode(.monochrome)
                 .foregroundStyle(Theme.numeralMuted)
                 .frame(width: 48, height: 48)
                 .ocrGlass(
@@ -347,8 +430,8 @@ struct ScanView: View {
     /// ring turns to glass.
     ///
     /// The ring uses `.regular` tinted with the accent, not `.clear`: clear
-    /// glass has almost nothing to refract on the dark placeholder stage
-    /// (`#0C0C0F`, and the whole canvas behind it is true black), where it
+    /// glass has almost nothing to refract on the unlit stage (`stageFill`, with
+    /// the ambient canvas behind it only a few L\* points brighter), where it
     /// rendered as an all-but-invisible smudge. Regular glass plus the design's
     /// 2pt accent ring keeps the shutter legible on an unstarted stage *and*
     /// over a bright live feed — the one treatment that survives both.
@@ -387,7 +470,7 @@ struct ScanView: View {
     /// `white 8%` it replaced, which measured 3.06:1 on the same frame. Both
     /// are under the spec's floor.
     ///
-    /// Tinting toward the stage's own `#0C0C0F` stops the pill following a
+    /// Tinting toward the stage's own `stageFill` stops the pill following a
     /// bright photo upward, so one treatment holds on a dark feed and a blown-out
     /// one alike. The label colour is unchanged.
     ///
@@ -494,7 +577,12 @@ struct ScanView: View {
     /// **Both stay flat.** "Retake" was glass for one round of this pass and it
     /// was the clearest regression in it: over the review photo the material
     /// sampled `#D8796E` and white 16/600 fell to **3.05:1**, against the
-    /// **11.9:1** the opaque `surfaceRaised` capsule guarantees on any photo.
+    /// **14.46:1** the opaque `surfaceRaised` capsule guarantees on any photo.
+    /// (White on `#2C2737`, recomputed. The **11.9:1** this used to quote was
+    /// never right for this pair — it is near `numeralMuted`'s number, not
+    /// white's — and it disagreed with the 14.x this same file states in its
+    /// type doc. In a file whose whole argument is "measured, not estimated",
+    /// a stale figure is what the next change gets checked against.)
     /// These two buttons sit on the largest, least predictable backdrop in the
     /// app — a full-bleed photograph the user chose — and an opaque capsule is
     /// the only thing that makes their contrast independent of it. Glass is for
@@ -536,10 +624,14 @@ struct ScanView: View {
                     openURL(url)
                 }
             }
-            .buttonStyle(OCRPrimaryButtonStyle(height: 50))
+            .buttonStyle(OCRPrimaryButtonStyle(height: Self.ctaHeight))
 
             libraryPickerButton(title: "Choose Photo")
-                .buttonStyle(OCRSecondaryButtonStyle())
+                // Stated rather than defaulted: this capsule is stacked
+                // directly under the primary above it, and the secondary
+                // style's own 52 default is the *paired-action* height, which
+                // would have left two stacked capsules 2pt apart.
+                .buttonStyle(OCRSecondaryButtonStyle(height: Self.ctaHeight))
         }
     }
 
@@ -550,7 +642,7 @@ struct ScanView: View {
             message: "No camera is available on this device. Choose a photo from your library to analyze instead."
         ) {
             libraryPickerButton(title: "Choose Photo")
-                .buttonStyle(OCRPrimaryButtonStyle(height: 50))
+                .buttonStyle(OCRPrimaryButtonStyle(height: Self.ctaHeight))
         }
     }
 
@@ -563,7 +655,7 @@ struct ScanView: View {
             Button("Try again") {
                 Task { await camera.start() }
             }
-            .buttonStyle(OCRPrimaryButtonStyle(height: 50))
+            .buttonStyle(OCRPrimaryButtonStyle(height: Self.ctaHeight))
         }
     }
 
@@ -571,10 +663,10 @@ struct ScanView: View {
     /// explanation, and one or two capsule actions — centred in the stage.
     ///
     /// Deliberately **not** glass, primary or secondary. All three fallbacks
-    /// mean there is no preview: the stage is a flat `#0C0C0F` panel on a true
-    /// black canvas, so glass has nothing to refract and renders as a muddy
-    /// grey wash that reads *less* clearly than `surfaceRaised` does. These are
-    /// also the screens a blocked user is stuck on, which is the worst place to
+    /// mean there is no preview: the stage is a flat `stageFill` panel on the
+    /// ink canvas, so glass has nothing to refract and renders as a muddy grey
+    /// wash that reads *less* clearly than `surfaceRaised` does. These are also
+    /// the screens a blocked user is stuck on, which is the worst place to
     /// trade legibility for material.
     private func fallbackStage<Actions: View>(
         struckThrough: Bool,
@@ -595,7 +687,7 @@ struct ScanView: View {
             Text(message)
                 .font(.ocrBody())
                 .foregroundStyle(Theme.textSecondary)
-                .lineSpacing(3)
+                .ocrBodyLeading(size: 14.5)
                 .padding(.bottom, 26)
 
             VStack(spacing: Theme.spacingS) {

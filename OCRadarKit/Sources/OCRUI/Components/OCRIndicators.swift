@@ -56,13 +56,18 @@ struct OCRClassBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
+                // Label and value were 15/400 white against 14.5/400 secondary:
+                // half a point apart, identical weight. `design/README.md` gives
+                // a list value as `15.5–16 / 400–500`, so taking the two ends of
+                // that range separates them by size *and* weight *and* colour —
+                // the name reads as the label, the number as the datum.
                 Text(name)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15.5))
                     .foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: Theme.spacingS)
                 Text(percentText)
-                    .font(.system(size: 14.5))
+                    .font(.system(size: 14.5, weight: .medium))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -76,8 +81,14 @@ struct OCRClassBar: View {
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Theme.surfaceRaised)
+                // The **displayed** percentage, not the raw probability. The
+                // label rounds through `ConfidencePercent` and the bar did not,
+                // so two rows both labelled "22%" drew bars 1.7pt apart on the
+                // same track — visible in the card without measuring, and the
+                // one surface bypassing the rounding invariant `Theme` exists
+                // to guarantee.
                 fill
-                    .frame(width: max(0, proxy.size.width * min(max(probability, 0), 1)))
+                    .frame(width: proxy.size.width * CGFloat(ConfidencePercent.value(probability)) / 100)
                     .clipShape(.capsule)
             }
         }

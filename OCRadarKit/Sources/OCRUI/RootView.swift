@@ -172,8 +172,13 @@ public struct RootView: View {
 
     public var body: some View {
         ZStack(alignment: .bottom) {
-            Theme.canvas
-                .ignoresSafeArea()
+            // The root plane, and the reason nothing anywhere in the app can
+            // fall through to a bare rectangle: every screen paints its own
+            // ambient background, and this one covers the seams between them —
+            // behind a rising sheet, behind a tab swap, behind the rubber band
+            // at the end of a scroll. It is the same treatment, so those seams
+            // are invisible rather than a shade off.
+            OCRAmbientBackground()
             selectedScreen
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             OCRTabBar(selection: $selectedTab)
@@ -315,8 +320,7 @@ private struct QAAutomationHooks: ViewModifier {
 }
 
 #Preview("Disclaimer") {
-    Theme.canvas
-        .ignoresSafeArea()
+    OCRAmbientBackground()
         .sheet(isPresented: .constant(true)) {
             MedicalDisclaimerSheet(
                 title: "Before you begin",

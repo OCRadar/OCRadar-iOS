@@ -1,6 +1,19 @@
-// OCRadarTheme.swift — starting point for the restyle.
-// Values transcribed from the HTML design reference in this bundle.
-// Drop into OCRadarKit/Sources/OCRUI/Components/ and replace the existing Theme.
+// OCRadarTheme.swift — SUPERSEDED. Historical reference only; do not ship it.
+//
+// This was the starting point for the restyle: the palette transcribed straight
+// from the HTML design reference in this bundle. The shipped palette is
+// OCRadarKit/Sources/OCRUI/Components/Theme.swift, and it has since moved off
+// this one deliberately — the neutral ramp below was re-derived as a violet ink
+// family biased toward the hero gradient's deep stop (#4B2E8F), because a pure
+// black canvas is the one colour every dark app inherits for free and so reads
+// as un-chosen. Two of the text colours here are also under the contrast floor
+// on the surfaces they are actually drawn on: `chevron` #5A5A62 measures 2.83:1
+// on `surface`, and `textTertiary` #76767E measures 3.88:1.
+//
+// This file is not in the Xcode project and compiles nowhere. Copying it into
+// the package — which the line that used to sit here told the reader to do —
+// would revert the whole identity pass and reintroduce both sub-floor colours.
+// Read it to see where the palette started; take values from Theme.swift.
 
 import SwiftUI
 

@@ -23,7 +23,7 @@ On-device oral-lesion screening for iPhone: photograph a spot in your mouth and 
 - **iOS 26** deployment target; iPhone only, portrait orientation
 - Swift 6 language mode; the `OCRadarKit` package uses Swift tools 6.2
 - A **physical iPhone** for camera capture — the Simulator has no camera, so the app offers photo-library import there instead
-- For model training only: **Python 3.10+** with PyTorch ≥ 2.3 and coremltools ≥ 8.0 (see `ml/pyproject.toml`); training runs on CUDA, Apple Silicon (MPS), or CPU
+- For model training only: **Python 3.10+** with PyTorch ≥ 2.5 and coremltools ≥ 8.0 (see `ml/pyproject.toml`); training runs on CUDA, Apple Silicon (MPS), or CPU
 
 ## Getting started
 
@@ -33,7 +33,7 @@ cd OCR-iOS
 open OCRadar.xcodeproj
 ```
 
-Select the `OCRadar` scheme and run. No further setup is needed: **without a trained model the app launches in clearly-labeled demo mode**, backed by a deterministic mock classifier, so every screen is fully navigable. Install a trained model (next section) and the app switches to real Core ML inference automatically at launch.
+Select the `OCRadar` scheme and run. No further setup is needed: **without a trained model the app launches in clearly-labeled demo mode**, backed by a deterministic mock classifier, so every screen is fully navigable. Install a trained model (next section) and the app loads it in the background at launch, switching from demo mode to real Core ML inference as soon as it is ready.
 
 ## Training your own model
 
@@ -83,7 +83,7 @@ OCR-iOS/
 
 ## Architecture
 
-The app target is deliberately thin: one file that picks the inference backend at launch (`CoreMLLesionClassifier.bundled()` when a model is in the bundle, `MockLesionClassifier` otherwise) and hands it to `RootView`. Everything else lives in the `OCRadarKit` package, split so that UI, capture, and inference stay decoupled — `OCRUI` never imports `OCRVision`; the two only meet through the `LesionClassifying` protocol defined in `OCRCore` and injected via a SwiftUI environment key.
+The app target is deliberately thin: one file that starts with `MockLesionClassifier`, hands it to `RootView`, and swaps in `CoreMLLesionClassifier.bundled()` from a background task when a model is in the bundle (model loading never blocks launch). Everything else lives in the `OCRadarKit` package, split so that UI, capture, and inference stay decoupled — `OCRUI` never imports `OCRVision`; the two only meet through the `LesionClassifying` protocol defined in `OCRCore` and injected via a SwiftUI environment key.
 
 ```mermaid
 graph TD

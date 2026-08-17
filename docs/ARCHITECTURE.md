@@ -45,12 +45,7 @@ There are exactly two conformances:
 
 ### Mock-vs-CoreML selection at app start
 
-`OCRadarApp.makeClassifier()` runs once, at process start:
-
-```swift
-if let model = CoreMLLesionClassifier.bundled() { return model }
-return MockLesionClassifier()
-```
+The app always launches with the mock and upgrades asynchronously: `OCRadarApp` holds `@State private var classifier: any LesionClassifying = MockLesionClassifier()` and, from `RootView`'s `.task`, loads `CoreMLLesionClassifier.bundled()` in a detached background task, swapping it into state when it resolves. `MLModel(contentsOf:)` can be slow — especially on first launch after install, when Core ML may recompile for the ANE/GPU — so it deliberately never runs during `App` init; with a model bundled, the app spends its first moments in demo mode until the swap lands, and every view picks up the new classifier automatically because consumers read it from the environment at use time.
 
 `CoreMLLesionClassifier.bundled(in:)` looks in `Bundle.main` for `OralLesionClassifier.mlmodelc` (Xcode compiles the `.mlpackage` into this) and `ModelManifest.json`. It returns `nil` — and the app stays in demo mode — when either resource is missing or when initialization throws; failures are logged via `os.Logger` (subsystem `com.ocradar.OCRVision`), never crash the app.
 

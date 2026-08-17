@@ -17,7 +17,10 @@ struct OCRadarApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(classifier: classifier)
+            // The `ocrnew` mark lives in this target's asset catalog, so it is
+            // injected rather than duplicated into OCRadarKit. `.ocrnew` is the
+            // generated `ImageResource` symbol for `ocrnew.imageset`.
+            RootView(classifier: classifier, logo: Image(.ocrnew))
                 .task {
                     guard !hasStartedModelLoad else { return }
                     hasStartedModelLoad = true

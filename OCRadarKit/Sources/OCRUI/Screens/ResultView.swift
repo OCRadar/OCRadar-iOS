@@ -1,222 +1,252 @@
-import CoreGraphics
 import OCRCore
 import SwiftUI
-import UIKit
 
-/// Presents one classification outcome: the analyzed image, the top class
-/// with a probability ring and risk badge, every class score, and the full
-/// medical disclaimer with professional-care guidance.
+/// Presents one classification outcome: a gradient sheet header carrying the
+/// top class and its confidence, every class score, and the professional-care
+/// guidance plus the full medical disclaimer.
+///
+/// The analyzed photo is deliberately **not** shown here. The design lists the
+/// sheet's contents exactly — header, demo banner, all-classes card, callout,
+/// footnote — and an earlier draft's 200pt image card between the banner and
+/// the scores dominated the sheet and pushed the scores below the fold. The
+/// view therefore does not take an image at all; the saved photo remains
+/// visible in `HistoryDetailView`.
+///
+/// Three honesty rules are load-bearing here and must not be simplified:
+/// the demo notice and the " · demo result" meta suffix appear for every demo
+/// result; the professional-care callout has two mutually exclusive branches
+/// and a demo score never receives the tier copy; per-class summaries are
+/// withheld for demo results.
 struct ResultView: View {
     let result: ClassificationResult
-    let image: CGImage
 
     @Environment(\.lesionClassifier) private var classifier
     @Environment(\.dismiss) private var dismiss
 
-    /// Ring diameter tracks Dynamic Type (its interior text is .title2), so
-    /// the percent and "confidence" label stay inside the stroke at
-    /// accessibility sizes instead of overflowing a fixed 132pt frame.
-    @ScaledMetric(relativeTo: .title2) private var ringSize: CGFloat = 132
+    /// Vertical rhythm inside the sheet body, measured from the design.
+    private let afterNotice: CGFloat = 22
+    private let betweenCards: CGFloat = 16
+    private let beforeFootnote: CGFloat = 18
 
     var body: some View {
-        NavigationStack {
-            Group {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+
                 if let top = result.top {
-                    resultContent(for: top)
+                    content(for: top)
                 } else {
-                    ContentUnavailableView(
-                        "No Result",
-                        systemImage: "questionmark.circle",
-                        description: Text("The analysis returned no scores. Try another photo.")
-                    )
+                    emptyScoresContent
                 }
             }
-            .navigationTitle("Result")
-            .toolbarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+        }
+        .scrollIndicators(.hidden)
+        .ocrQAScrollBottom()
+        .background(Theme.canvas)
+        .foregroundStyle(Theme.textPrimary)
+        .presentationBackground(Theme.canvas)
+        .presentationCornerRadius(Theme.sheetCorner)
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        OCRSheetHeader(
+            eyebrow: "Result",
+            meta: metaText,
+            percentText: heroPercentText,
+            title: result.top?.displayName ?? "No result",
+            tierText: result.top?.riskLevel.displayLabel ?? "No scores returned",
+            onDone: { dismiss() }
+        )
+    }
+
+    /// "Just analyzed", with the demo suffix appended for demo results only.
+    private var metaText: String {
+        result.isDemoResult ? "Just analyzed · demo result" : "Just analyzed"
+    }
+
+    /// Shares `ConfidencePercent` with Home, History and the class bars: the
+    /// scan saved by this very sheet must not read a point apart in the History
+    /// row it creates.
+    private var heroPercentText: String {
+        guard let top = result.top else { return "—" }
+        return ConfidencePercent.text(top.probability)
+    }
+
+    // MARK: - Body
+
+    private func content(for top: LabelScore) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if result.isDemoResult {
+                demoNotice
+                    .padding(.bottom, afterNotice)
+            }
+
+            // The per-class medical summary is withheld for demo results:
+            // pairing genuine medical guidance with a fabricated score would
+            // lend it unearned weight.
+            if !result.isDemoResult,
+               let summary = classifier.manifest.classInfo(forID: top.id)?.summary {
+                summaryCard(summary)
+                    .padding(.bottom, betweenCards)
+            }
+
+            allClassesCard
+                .padding(.bottom, betweenCards)
+
+            professionalCallout(for: top)
+                .padding(.bottom, beforeFootnote)
+
+            disclaimerFootnote
+        }
+        .modifier(SheetBodyInsets())
+    }
+
+    /// A result with no scores still has to render something sane and
+    /// dismissible — the header's Done button remains the way out.
+    private var emptyScoresContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if result.isDemoResult {
+                demoNotice
+                    .padding(.bottom, afterNotice)
+            }
+
+            OCRCard(corner: Theme.panelCorner, padding: 20) {
+                Text("The analysis returned no scores. Try another photo.")
+                    .font(.ocrBody())
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+            .padding(.bottom, betweenCards)
+
+            // With no top score there is no tier, so only the generic
+            // when-in-doubt guidance can apply.
+            genericCallout
+                .padding(.bottom, beforeFootnote)
+
+            disclaimerFootnote
+        }
+        .modifier(SheetBodyInsets())
+    }
+
+    /// Shown whenever the result came from the demo stand-in classifier, so a
+    /// mock score can never be mistaken for real analysis — regardless of how
+    /// the user reached this screen.
+    private var demoNotice: some View {
+        OCRDemoNotice(
+            title: "Demo result — no trained model installed.",
+            message: "These scores are generated placeholders and carry no medical meaning."
+        )
+    }
+
+    private func summaryCard(_ summary: String) -> some View {
+        OCRCard(corner: Theme.panelCorner, padding: 20) {
+            Text(summary)
+                .font(.ocrBody())
+                .foregroundStyle(Theme.textSecondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+        }
+    }
+
+    // MARK: - All classes
+
+    private var allClassesCard: some View {
+        OCRCard(corner: Theme.panelCorner, padding: 20) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("All classes")
+                    .font(.ocrCardTitle())
+                    .tracking(-0.25)
+                    .padding(.bottom, 20)
+
+                // `result.scores` is already sorted most-probable first, so the
+                // index is the rank: 0 takes the top bar, the rest step down
+                // the purple ramp.
+                VStack(alignment: .leading, spacing: Theme.spacingM) {
+                    ForEach(Array(result.scores.enumerated()), id: \.element.id) { index, score in
+                        OCRClassBar(
+                            name: score.displayName,
+                            probability: score.probability,
+                            rank: index
+                        )
                     }
                 }
             }
+            .padding(.vertical, 2)
         }
     }
 
-    private func resultContent(for top: LabelScore) -> some View {
-        ScrollView {
-            VStack(spacing: Theme.spacingL) {
-                if result.isDemoResult {
-                    demoBanner
-                }
-                heroCard(for: top)
-                allClassesCard
-                footer(for: top)
-            }
-            .padding()
+    // MARK: - Professional care
+
+    /// Two mutually exclusive branches. A demo score cannot "fall in a tier
+    /// that warrants professional evaluation" — only the generic when-in-doubt
+    /// guidance applies to it. The two strings are never blended.
+    @ViewBuilder
+    private func professionalCallout(for top: LabelScore) -> some View {
+        if top.riskLevel >= .moderate, !result.isDemoResult {
+            calloutCard(
+                title: "See a dentist or physician",
+                detail: "This result falls in a tier that warrants professional evaluation. Book an appointment soon rather than waiting."
+            )
+        } else {
+            genericCallout
         }
     }
 
-    /// Prominent notice shown whenever the result came from the demo
-    /// stand-in classifier, so a mock score can never be mistaken for real
-    /// analysis — regardless of how the user reached this screen.
-    private var demoBanner: some View {
-        Label {
-            VStack(alignment: .leading, spacing: Theme.spacingXS) {
-                Text("Demo result — no trained model installed")
-                    .font(.subheadline.weight(.semibold))
-                Text("These scores are generated placeholders and carry no medical meaning.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        } icon: {
-            Image(systemName: "testtube.2")
-                .foregroundStyle(.orange)
-        }
-        .padding(Theme.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.15), in: .rect(cornerRadius: Theme.cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                .strokeBorder(.orange.opacity(0.4), lineWidth: 1)
+    private var genericCallout: some View {
+        calloutCard(
+            title: "When in doubt, see a dentist or physician",
+            detail: "Only a professional exam can rule a lesion in or out."
         )
+    }
+
+    private func calloutCard(title: String, detail: String) -> some View {
+        OCRCard(corner: Theme.panelCorner, padding: 20) {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Image(systemName: "stethoscope")
+                        .font(.system(size: 21))
+                        .foregroundStyle(Theme.accent)
+                        .accessibilityHidden(true)
+                    Text(title)
+                        .font(.system(size: 16.5, weight: .semibold))
+                        .tracking(-0.25)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(detail)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 2)
+        }
         .accessibilityElement(children: .combine)
     }
 
-    private func heroCard(for top: LabelScore) -> some View {
-        GlassCard {
-            VStack(spacing: Theme.spacingM) {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 120, height: 120)
-                    .clipShape(.rect(cornerRadius: Theme.cornerRadius - Theme.spacingS))
+    // MARK: - Footnote
 
-                Text(top.displayName)
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-
-                ProbabilityRing(probability: top.probability, tint: top.riskLevel.color)
-                    .frame(width: ringSize, height: ringSize)
-
-                RiskBadge(level: top.riskLevel)
-
-                // The per-class medical summary is withheld for demo results:
-                // pairing genuine medical guidance with a fabricated score
-                // would lend it unearned weight.
-                if !result.isDemoResult,
-                   let summary = classifier.manifest.classInfo(forID: top.id)?.summary {
-                    Text(summary)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
-    private var allClassesCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: Theme.spacingM) {
-                Text("All Classes")
-                    .font(.headline)
-                ForEach(result.scores) { score in
-                    ScoreRow(score: score)
-                }
-            }
-        }
-    }
-
-    private func footer(for top: LabelScore) -> some View {
-        VStack(spacing: Theme.spacingM) {
-            professionalCallout(for: top)
-            GlassCard {
-                Label {
-                    Text(MedicalDisclaimer.full)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } icon: {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(Theme.accent)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func professionalCallout(for top: LabelScore) -> some View {
-        // A demo score cannot "fall in a tier that warrants professional
-        // evaluation" — only the generic when-in-doubt guidance applies.
-        if top.riskLevel >= .moderate, !result.isDemoResult {
-            calloutLabel(
-                title: "See a dentist or physician",
-                detail: "This result falls in a tier that warrants professional evaluation. Book an appointment soon rather than waiting.",
-                tint: top.riskLevel.color
-            )
-            .padding(Theme.cardPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(top.riskLevel.color.opacity(0.15), in: .rect(cornerRadius: Theme.cornerRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                    .strokeBorder(top.riskLevel.color.opacity(0.4), lineWidth: 1)
-            )
-        } else {
-            GlassCard {
-                calloutLabel(
-                    title: "When in doubt, see a dentist or physician",
-                    detail: "Only a professional exam can rule a lesion in or out.",
-                    tint: Theme.accent
-                )
-            }
-        }
-    }
-
-    private func calloutLabel(title: String, detail: String, tint: Color) -> some View {
-        Label {
-            VStack(alignment: .leading, spacing: Theme.spacingXS) {
-                Text(title)
-                    .font(.headline)
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        } icon: {
-            Image(systemName: "stethoscope")
-                .foregroundStyle(tint)
-        }
+    private var disclaimerFootnote: some View {
+        Text(MedicalDisclaimer.full)
+            .font(.ocrFootnote())
+            .foregroundStyle(Theme.textTertiary)
+            .lineSpacing(4)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
-/// Circular ring showing the top-class probability as a percentage.
-private struct ProbabilityRing: View {
-    let probability: Double
-    let tint: Color
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(tint.opacity(0.15), lineWidth: 12)
-            Circle()
-                .trim(from: 0, to: min(max(probability, 0), 1))
-                .stroke(tint, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            VStack(spacing: 0) {
-                Text(percentText)
-                    .font(.title2.bold())
-                    .monospacedDigit()
-                Text("confidence")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(Theme.spacingS)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Confidence \(percentText)")
-    }
-
-    private var percentText: String {
-        probability.formatted(.percent.precision(.fractionLength(0)))
+/// Shared page insets for the sheet body below the gradient header.
+private struct SheetBodyInsets: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.pageMargin)
+            .padding(.top, Theme.pageMargin)
+            .padding(.bottom, 44)
     }
 }
 
@@ -236,21 +266,7 @@ private struct ProbabilityRing: View {
         modelVersion: "mock-0.0.0",
         inferenceDuration: .milliseconds(180)
     )
-    if let image = makeResultPreviewImage() {
-        ResultView(result: result, image: image)
-            .environment(\.lesionClassifier, MockLesionClassifier())
-    }
-}
-
-/// Renders a flat-color stand-in photo for the preview above.
-private func makeResultPreviewImage() -> CGImage? {
-    let size = CGSize(width: 480, height: 360)
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 1
-    let renderer = UIGraphicsImageRenderer(size: size, format: format)
-    let rendered = renderer.image { context in
-        UIColor.systemPink.withAlphaComponent(0.6).setFill()
-        context.fill(CGRect(origin: .zero, size: size))
-    }
-    return rendered.cgImage
+    ResultView(result: result)
+        .environment(\.lesionClassifier, MockLesionClassifier())
+        .preferredColorScheme(.dark)
 }

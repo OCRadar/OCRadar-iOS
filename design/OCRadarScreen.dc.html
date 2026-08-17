@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}a{color:#C77BE8}a:hover{color:#DBA5F0}
+@keyframes ocrBlink{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes ocrSpin{to{transform:rotate(360deg)}}
+@keyframes ocrUp{from{transform:translateY(30px)}to{transform:translateY(0)}}
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" width="{{ 402 }}" height="{{ 874 }}" hint-size="402px,874px">
+<div style="height:874px;position:relative;overflow:hidden;background:#000;font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none">
+
+<div style="position:relative;padding:96px 26px 30px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 52%,#96554F 100%);border-radius:0 0 34px 34px;overflow:hidden">
+  <div style="position:absolute;right:-70px;top:-40px;width:230px;height:230px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+  <div style="position:absolute;right:-20px;top:10px;width:130px;height:130px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;margin-bottom:36px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <img src="assets/ocrnew.png" alt="" width="26" height="26" style="display:block;width:26px;height:26px;border-radius:100px">
+      <div style="font-size:16.5px;font-weight:600;letter-spacing:-.2px">OCRadar</div>
+    </div>
+    <button type="button" onClick="{{ goSettings }}" aria-label="Settings" style="width:34px;height:34px;border:0;background:rgba(255,255,255,.16);cursor:pointer;border-radius:100px;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(255,255,255,.26)"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#fff" aria-hidden="true">settings</span></button>
+  </div>
+
+  <button type="button" onClick="{{ openRec1 }}" aria-label="Most recent scan: no visible lesion, 91 percent confidence, low risk, 1 hour ago" style="position:relative;display:block;width:100%;box-sizing:border-box;text-align:left;background:none;border:0;padding:0;cursor:pointer;font-family:inherit;color:#fff">
+    <div style="font-size:13.5px;font-weight:500;color:rgba(255,255,255,.92);margin-bottom:12px">Last scan · 1 hour ago</div>
+    <div style="font-size:76px;font-weight:600;letter-spacing:-3.6px;line-height:.95;font-variant-numeric:tabular-nums;margin-bottom:10px">91%</div>
+    <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;margin-bottom:6px;text-wrap:pretty">No visible lesion</div>
+    <div style="font-size:15.5px;color:rgba(255,255,255,.92)">Low risk{{ demoTail }}</div>
+  </button>
+
+  <button type="button" onClick="{{ goScan }}" style="position:relative;margin-top:30px;width:100%;height:54px;border:0;cursor:pointer;border-radius:100px;background:#fff;color:#2A1745;font-family:inherit;font-size:16.5px;font-weight:600;letter-spacing:-.15px;display:flex;align-items:center;justify-content:center;gap:9px" style-hover="background:#F2ECFF" style-active="transform:scale(.99)">
+    <span style="font-family:'Material Symbols Rounded';font-size:20px" aria-hidden="true">photo_camera</span>New scan
+  </button>
+</div>
+
+<div style="padding:34px 26px 130px">
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:21px;font-weight:600;letter-spacing:-.45px">Earlier scans</div>
+    <button type="button" onClick="{{ goHistory }}" style="border:0;background:none;padding:0;cursor:pointer;font-family:inherit;font-size:15px;color:#C77BE8">See all</button>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button type="button" onClick="{{ openRec2 }}" aria-label="Scan from yesterday: leukoplakia, 64 percent confidence, moderate risk" style="width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;gap:16px;background:#131316;border-radius:16px;padding:16px 18px" style-hover="background:#1A1A1E">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-1px;font-variant-numeric:tabular-nums;width:52px;color:#E8E6EC">64</div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:500;letter-spacing:-.2px">Leukoplakia</div>
+        <div style="padding-top:3px;font-size:13.5px;color:#8E8E93">Moderate risk · yesterday</div>
+      </div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+    <button type="button" onClick="{{ openRec3 }}" aria-label="Scan from 5 days ago: erythroplakia, 55 percent confidence, high risk" style="width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;gap:16px;background:#131316;border-radius:16px;padding:16px 18px" style-hover="background:#1A1A1E">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-1px;font-variant-numeric:tabular-nums;width:52px;color:#E8E6EC">55</div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:500;letter-spacing:-.2px">Erythroplakia</div>
+        <div style="padding-top:3px;font-size:13.5px;color:#8E8E93">High risk · 5 days ago</div>
+      </div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+  </div>
+
+  <div style="height:34px"></div>
+
+  <div style="background:#131316;border-radius:20px;padding:22px 20px">
+    <div style="font-size:16.5px;font-weight:600;letter-spacing:-.25px;margin-bottom:2px">Confidence over time</div>
+    <div style="font-size:13.5px;color:#8E8E93;margin-bottom:20px">All three scans</div>
+    <svg viewBox="0 0 310 120" width="100%" height="120" role="img" aria-label="Top-class confidence: 55 percent five days ago, 64 percent yesterday, 91 percent one hour ago." style="display:block;overflow:visible">
+      <defs><linearGradient id="ocrArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C77BE8" stop-opacity=".38"></stop><stop offset="1" stop-color="#C77BE8" stop-opacity="0"></stop></linearGradient></defs>
+      <polygon points="34,64 155,55 276,26 276,104 34,104" fill="url(#ocrArea)"></polygon>
+      <polyline points="34,64 155,55 276,26" fill="none" stroke="#C77BE8" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"></polyline>
+      <circle cx="276" cy="26" r="4.5" fill="#000" stroke="#E39B7B" stroke-width="2.25"></circle>
+      <text x="34" y="118" fill="#8E8E93" font-size="11.5" font-family="-apple-system,system-ui" text-anchor="middle">5d</text>
+      <text x="155" y="118" fill="#8E8E93" font-size="11.5" font-family="-apple-system,system-ui" text-anchor="middle">1d</text>
+      <text x="276" y="118" fill="#fff" font-size="11.5" font-family="-apple-system,system-ui" text-anchor="middle">1h</text>
+    </svg>
+  </div>
+
+  <sc-if value="{{ demo }}" hint-placeholder-val="{{ true }}">
+  <div style="height:22px"></div>
+  <div style="display:flex;gap:11px;align-items:flex-start;border:1px solid #2A2A2E;border-radius:16px;padding:16px 18px">
+    <span style="width:8px;height:8px;border-radius:100px;background:#E39B7B;flex:none;margin-top:6px"></span>
+    <div style="font-size:13.5px;line-height:1.55;color:#8E8E93;text-wrap:pretty"><span style="color:#fff;font-weight:600">Demo mode — no trained model installed.</span> Results come from a deterministic stand-in so you can explore the app; they carry no medical meaning.</div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ live }}">
+  <div style="height:22px"></div>
+  <div style="display:flex;gap:11px;align-items:flex-start;border:1px solid #2A2A2E;border-radius:16px;padding:16px 18px">
+    <span style="width:8px;height:8px;border-radius:100px;background:#5FD3A6;flex:none;margin-top:6px"></span>
+    <div style="font-size:13.5px;line-height:1.55;color:#8E8E93;text-wrap:pretty"><span style="color:#fff;font-weight:600">Model 1.0.0</span> On-device Core ML model installed and ready.</div>
+  </div>
+  </sc-if>
+
+  <div style="height:16px"></div>
+  <div style="font-size:13px;line-height:1.6;color:#76767E">Not a medical device — results are informational only. <button type="button" onClick="{{ openDisclaimer }}" style="border:0;background:none;padding:0;cursor:pointer;font-family:inherit;font-size:13px;color:#C77BE8;text-decoration:underline;text-underline-offset:2px">Read the full notice</button></div>
+
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isScan }}">
+<div style="position:absolute;left:0;right:0;top:0;height:150px;z-index:2;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 62%,#96554F 100%);border-radius:0 0 30px 30px;overflow:hidden">
+  <div style="position:absolute;right:-56px;top:-52px;width:190px;height:190px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+  <div style="position:absolute;left:26px;right:26px;bottom:22px;display:flex;align-items:flex-end;justify-content:space-between">
+    <div>
+      <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;line-height:1">Scan</div>
+      <div style="padding-top:6px;font-size:13.5px;color:rgba(255,255,255,.92)">Nothing leaves your iPhone</div>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,.92)">{{ stepLabel }}</div>
+  </div>
+</div>
+
+<div style="position:absolute;left:16px;right:16px;top:166px;bottom:104px;border-radius:24px;overflow:hidden;background:#0C0C0F;border:1px solid #1C1C22;z-index:1">
+  <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.045) 0 1px,rgba(255,255,255,0) 1px 11px)"></div>
+
+  <sc-if value="{{ stageLive }}" hint-placeholder-val="{{ true }}">
+  <svg viewBox="0 0 250 250" width="250" height="250" aria-hidden="true" style="position:absolute;left:50%;top:206px;transform:translate(-50%,-50%);opacity:.55">
+    <circle cx="125" cy="125" r="118" fill="none" stroke="#26262E" stroke-width="1"></circle>
+    <circle cx="125" cy="125" r="80" fill="none" stroke="#26262E" stroke-width="1"></circle>
+    <circle cx="125" cy="125" r="42" fill="none" stroke="#26262E" stroke-width="1"></circle>
+    <line x1="125" y1="7" x2="125" y2="243" stroke="#26262E" stroke-width="1"></line>
+    <line x1="7" y1="125" x2="243" y2="125" stroke="#26262E" stroke-width="1"></line>
+    <g style="transform-origin:125px 125px;animation:ocrSpin 4s linear infinite"><path d="M125 125 L125 7" stroke="#C77BE8" stroke-width="2" stroke-linecap="round"></path></g>
+  </svg>
+  <div style="position:absolute;left:40px;right:40px;top:113px;height:186px">
+    <div style="position:absolute;left:0;top:0;width:26px;height:26px;border-top:2px solid #C77BE8;border-left:2px solid #C77BE8;border-top-left-radius:8px"></div>
+    <div style="position:absolute;right:0;top:0;width:26px;height:26px;border-top:2px solid #C77BE8;border-right:2px solid #C77BE8;border-top-right-radius:8px"></div>
+    <div style="position:absolute;left:0;bottom:0;width:26px;height:26px;border-bottom:2px solid #C77BE8;border-left:2px solid #C77BE8;border-bottom-left-radius:8px"></div>
+    <div style="position:absolute;right:0;bottom:0;width:26px;height:26px;border-bottom:2px solid #C77BE8;border-right:2px solid #C77BE8;border-bottom-right-radius:8px"></div>
+  </div>
+  <div style="position:absolute;left:0;right:0;top:322px;text-align:center;font-size:14px;line-height:1.5;color:#8E8E93">Frame the area that concerns you<br>Hold steady in good light</div>
+
+  <div style="position:absolute;left:16px;top:16px;display:flex;align-items:center;gap:8px;height:30px;padding:0 13px;border-radius:100px;background:rgba(255,255,255,.08)">
+    <span style="width:6px;height:6px;border-radius:100px;background:#E39B7B;animation:ocrBlink 2s ease-in-out infinite"></span>
+    <span style="font-size:12.5px;font-weight:500;color:#D5D3DB">Camera ready</span>
+  </div>
+  <button type="button" aria-label="Toggle flash" style="position:absolute;right:14px;top:14px;width:34px;height:34px;border-radius:100px;border:0;background:rgba(255,255,255,.08);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(255,255,255,.18)"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#D5D3DB" aria-hidden="true">bolt</span></button>
+
+  <div style="position:absolute;left:0;right:0;bottom:26px;display:flex;align-items:center;justify-content:center;gap:40px">
+    <button type="button" aria-label="Choose a photo from your library" style="width:48px;height:48px;border-radius:100px;border:0;background:rgba(255,255,255,.08);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(255,255,255,.18)" style-active="transform:scale(.95)"><span style="font-family:'Material Symbols Rounded';font-size:21px;color:#D5D3DB" aria-hidden="true">photo_library</span></button>
+    <button type="button" onClick="{{ shoot }}" aria-label="Capture photo" style="width:78px;height:78px;padding:0;border:0;cursor:pointer;border-radius:100px;background:rgba(199,123,232,.12);box-shadow:0 0 0 2px rgba(199,123,232,.55);display:flex;align-items:center;justify-content:center" style-active="transform:scale(.95)">
+      <span style="width:60px;height:60px;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F)"></span>
+    </button>
+    <div style="width:48px;height:48px" aria-hidden="true"></div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ scanBlocked }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center">
+    <svg width="66" height="66" viewBox="0 0 66 66" aria-hidden="true" style="margin-bottom:22px">
+      <circle cx="33" cy="33" r="31" fill="none" stroke="#26262E" stroke-width="1.5"></circle>
+      <circle cx="33" cy="33" r="20" fill="none" stroke="#26262E" stroke-width="1.5"></circle>
+      <circle cx="33" cy="33" r="9" fill="none" stroke="#26262E" stroke-width="1.5"></circle>
+      <line x1="13" y1="53" x2="53" y2="13" stroke="#C77BE8" stroke-width="2.5" stroke-linecap="round"></line>
+    </svg>
+    <sc-if value="{{ scanDenied }}">
+    <div style="font-size:21px;font-weight:600;letter-spacing:-.45px;margin-bottom:10px">Camera access needed</div>
+    <div style="font-size:14.5px;line-height:1.5;color:#8E8E93;text-wrap:pretty;margin-bottom:26px">OCRadar uses the camera to photograph areas inside your mouth. Allow camera access in Settings to scan, or analyze a photo from your library instead.</div>
+    <button type="button" style="width:100%;max-width:250px;height:50px;border:0;cursor:pointer;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16px;font-weight:600;margin-bottom:10px" style-hover="filter:brightness(1.08)">Open Settings</button>
+    <button type="button" style="width:100%;max-width:250px;height:50px;border:0;cursor:pointer;border-radius:100px;background:#26262C;color:#fff;font-family:inherit;font-size:16px;font-weight:600" style-hover="background:#32323A">Choose photo</button>
+    </sc-if>
+    <sc-if value="{{ scanUnavailable }}">
+    <div style="font-size:21px;font-weight:600;letter-spacing:-.45px;margin-bottom:10px">Camera unavailable</div>
+    <div style="font-size:14.5px;line-height:1.5;color:#8E8E93;text-wrap:pretty;margin-bottom:26px">No camera is available on this device. Choose a photo from your library to analyze instead.</div>
+    <button type="button" style="width:100%;max-width:250px;height:50px;border:0;cursor:pointer;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16px;font-weight:600" style-hover="filter:brightness(1.08)">Choose photo</button>
+    </sc-if>
+    <sc-if value="{{ scanFailed }}">
+    <div style="font-size:21px;font-weight:600;letter-spacing:-.45px;margin-bottom:10px">Camera error</div>
+    <div style="font-size:14.5px;line-height:1.5;color:#8E8E93;text-wrap:pretty;margin-bottom:26px">The camera could not be started. Close other apps using the camera and try again.</div>
+    <button type="button" style="width:100%;max-width:250px;height:50px;border:0;cursor:pointer;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16px;font-weight:600" style-hover="filter:brightness(1.08)">Try again</button>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ stageReview }}">
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8E8E93">Captured photo</div>
+  <div style="position:absolute;left:16px;top:16px;height:30px;display:flex;align-items:center;padding:0 13px;border-radius:100px;background:rgba(255,255,255,.08);font-size:12.5px;font-weight:500;color:#D5D3DB">Review</div>
+  <sc-if value="{{ analyzing }}">
+  <div style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;border-radius:100px;background:rgba(199,123,232,.16);display:flex;align-items:center;justify-content:center;gap:11px">
+    <span style="width:8px;height:8px;border-radius:100px;background:#C77BE8;animation:ocrBlink 1s ease-in-out infinite"></span>
+    <span style="font-size:16px;font-weight:600">Analyzing on device…</span>
+  </div>
+  </sc-if>
+  <sc-if value="{{ notAnalyzing }}">
+  <div style="position:absolute;left:16px;right:16px;bottom:22px;display:flex;gap:10px">
+    <button type="button" onClick="{{ retake }}" style="flex:1;height:52px;border-radius:100px;border:0;background:#26262C;cursor:pointer;color:#fff;font-family:inherit;font-size:16px;font-weight:600" style-hover="background:#32323A" style-active="transform:scale(.98)">Retake</button>
+    <button type="button" onClick="{{ analyze }}" style="flex:1.4;height:52px;border-radius:100px;border:0;cursor:pointer;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16px;font-weight:600" style-hover="filter:brightness(1.08)" style-active="transform:scale(.98)">Analyze</button>
+  </div>
+  </sc-if>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHistory }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none">
+<div style="position:relative;padding:96px 26px 24px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 62%,#96554F 100%);border-radius:0 0 30px 30px;overflow:hidden">
+  <div style="position:absolute;right:-56px;top:-52px;width:190px;height:190px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+  <div style="position:relative;display:flex;align-items:flex-end;justify-content:space-between">
+    <div>
+      <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;line-height:1">History</div>
+      <div style="padding-top:6px;font-size:13.5px;color:rgba(255,255,255,.92)">Saved on this device only</div>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,.92)">{{ scanCountLabel }}</div>
+  </div>
+</div>
+
+<div style="padding:26px 26px 130px">
+  <sc-if value="{{ historyEmpty }}">
+  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:80px 14px 0">
+    <svg width="66" height="66" viewBox="0 0 66 66" aria-hidden="true" style="margin-bottom:22px">
+      <circle cx="33" cy="33" r="31" fill="none" stroke="#26262E" stroke-width="1.5"></circle>
+      <circle cx="33" cy="33" r="20" fill="none" stroke="#26262E" stroke-width="1.5" stroke-dasharray="3 5"></circle>
+      <circle cx="33" cy="33" r="3" fill="#4A4A52"></circle>
+    </svg>
+    <div style="font-size:21px;font-weight:600;letter-spacing:-.45px;margin-bottom:10px">No scans yet</div>
+    <div style="font-size:14.5px;line-height:1.5;color:#8E8E93;text-wrap:pretty;margin-bottom:26px">Photos you analyze in the Scan tab are saved here, on this device only.</div>
+    <button type="button" onClick="{{ goScan }}" style="height:50px;padding:0 24px;border:0;cursor:pointer;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px" style-hover="filter:brightness(1.08)">
+      <span style="font-family:'Material Symbols Rounded';font-size:19px" aria-hidden="true">photo_camera</span>Take your first scan
+    </button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ historyHasScans }}" hint-placeholder-val="{{ true }}">
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">August 2026</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button type="button" onClick="{{ openRec1 }}" aria-label="Scan from 1 hour ago: no visible lesion, 91 percent confidence, low risk" style="width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;gap:16px;background:#131316;border-radius:16px;padding:16px 18px" style-hover="background:#1A1A1E">
+      <div style="width:52px;height:52px;flex:none;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">91</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:500;letter-spacing:-.2px">No visible lesion</div>
+        <div style="padding-top:3px;font-size:13.5px;color:#8E8E93">Low risk{{ demoToken }} · 1h</div>
+      </div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+    <button type="button" onClick="{{ openRec2 }}" aria-label="Scan from yesterday: leukoplakia, 64 percent confidence, moderate risk" style="width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;gap:16px;background:#131316;border-radius:16px;padding:16px 18px" style-hover="background:#1A1A1E">
+      <div style="width:52px;height:52px;flex:none;border-radius:100px;background:#26262C;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:#E8E6EC">64</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:500;letter-spacing:-.2px">Leukoplakia</div>
+        <div style="padding-top:3px;font-size:13.5px;color:#8E8E93">Moderate risk{{ demoToken }} · 1d</div>
+      </div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+    <button type="button" onClick="{{ openRec3 }}" aria-label="Scan from 5 days ago: erythroplakia, 55 percent confidence, high risk" style="width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;gap:16px;background:#131316;border-radius:16px;padding:16px 18px" style-hover="background:#1A1A1E">
+      <div style="width:52px;height:52px;flex:none;border-radius:100px;background:#26262C;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:#E8E6EC">55</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:500;letter-spacing:-.2px">Erythroplakia</div>
+        <div style="padding-top:3px;font-size:13.5px;color:#8E8E93">High risk{{ demoToken }} · 5d</div>
+      </div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+  </div>
+  <div style="height:22px"></div>
+  <div style="font-size:13px;line-height:1.6;color:#76767E">Deleting a scan removes it permanently.</div>
+  </sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none">
+<div style="position:relative;padding:96px 26px 24px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 62%,#96554F 100%);border-radius:0 0 30px 30px;overflow:hidden">
+  <div style="position:absolute;right:-56px;top:-52px;width:190px;height:190px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+  <div style="position:relative">
+    <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;line-height:1">Settings</div>
+    <div style="padding-top:6px;font-size:13.5px;color:rgba(255,255,255,.92)">Model, privacy and support</div>
+  </div>
+</div>
+
+<div style="padding:26px 26px 130px">
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">Model</div>
+  <div style="background:#131316;border-radius:18px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 18px">
+      <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8;flex:none" aria-hidden="true">memory</span>
+      <div style="flex:1;font-size:16px">Engine</div>
+      <div style="font-size:16px;color:#8E8E93">{{ engineLabel }}</div>
+    </div>
+    <div style="height:1px;background:#1E1E24;margin-left:53px"></div>
+    <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 18px">
+      <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8;flex:none" aria-hidden="true">numbers</span>
+      <div style="flex:1;font-size:16px">Version</div>
+      <div style="font-size:16px;color:#8E8E93">{{ versionLabel }}</div>
+    </div>
+  </div>
+
+  <div style="height:24px"></div>
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">Classes &amp; risk tiers</div>
+  <div style="background:#131316;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div style="font-size:15.5px;color:#E8E6EC">No visible lesion</div><div style="font-size:14px;color:#8E8E93;white-space:nowrap">Low risk</div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div style="font-size:15.5px;color:#E8E6EC">Aphthous ulcer (canker sore)</div><div style="font-size:14px;color:#8E8E93;white-space:nowrap">Low risk</div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div style="font-size:15.5px;color:#E8E6EC">Oral lichen planus</div><div style="font-size:14px;color:#8E8E93;white-space:nowrap">Moderate risk</div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div style="font-size:15.5px;color:#E8E6EC">Leukoplakia</div><div style="font-size:14px;color:#8E8E93;white-space:nowrap">Moderate risk</div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><div style="font-size:15.5px;color:#E8E6EC">Erythroplakia</div><div style="font-size:14px;color:#8E8E93;white-space:nowrap">High risk</div></div>
+  </div>
+
+  <div style="height:24px"></div>
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">Privacy</div>
+  <div style="background:#131316;border-radius:18px;padding:18px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px">
+      <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8" aria-hidden="true">lock</span>
+      <div style="font-size:16px;font-weight:600;letter-spacing:-.2px">On-device only</div>
+    </div>
+    <div style="font-size:14px;line-height:1.5;color:#8E8E93">All analysis happens on this device. Photos and results never leave your iPhone unless you share them.</div>
+  </div>
+
+  <div style="height:24px"></div>
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">Support</div>
+  <div style="background:#131316;border-radius:18px;overflow:hidden">
+    <a href="mailto:contact@ocradar.com" style="display:flex;align-items:center;gap:14px;height:54px;padding:0 18px;text-decoration:none;color:#fff" style-hover="background:#1A1A1E">
+      <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8;flex:none" aria-hidden="true">mail</span>
+      <div style="flex:1;font-size:16px">Contact support</div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </a>
+    <div style="height:1px;background:#1E1E24;margin-left:53px"></div>
+    <button type="button" onClick="{{ openDisclaimer }}" style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:14px;height:54px;padding:0 18px;border:0;background:transparent;cursor:pointer;font-family:inherit;color:#fff;text-align:left" style-hover="background:#1A1A1E">
+      <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8;flex:none" aria-hidden="true">description</span>
+      <div style="flex:1;font-size:16px">Medical disclaimer</div>
+      <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5A5A62" aria-hidden="true">chevron_right</span>
+    </button>
+  </div>
+
+  <div style="height:24px"></div>
+  <div style="font-size:13px;font-weight:600;color:#8E8E93;margin-bottom:12px">About</div>
+  <div style="background:#131316;border-radius:18px;overflow:hidden">
+    <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px">App version</div><div style="font-size:16px;color:#8E8E93">1.0 (1)</div></div>
+    <div style="height:1px;background:#1E1E24;margin-left:18px"></div>
+    <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px">Copyright</div><div style="font-size:16px;color:#8E8E93">© 2026 OCRadar</div></div>
+  </div>
+
+  <div style="height:22px"></div>
+  <div style="font-size:13px;line-height:1.6;color:#76767E;text-wrap:pretty">Not a medical device — results are informational only.</div>
+</div>
+</div>
+</sc-if>
+
+<nav aria-label="Main" style="position:absolute;left:14px;right:14px;bottom:30px;height:62px;z-index:40;background:#16161A;border-radius:100px;display:flex;align-items:center;padding:0 6px;box-sizing:border-box;box-shadow:0 10px 30px rgba(0,0,0,.6)">
+  <button type="button" onClick="{{ goHome }}" aria-current="{{ homeCurrent }}" style="flex:1;height:50px;border:0;cursor:pointer;background:{{ homeBg }};border-radius:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:inherit">
+    <span style="font-family:'Material Symbols Rounded';font-size:21px;color:{{ homeTint }}" aria-hidden="true">home</span>
+    <span style="font-size:10px;color:{{ homeTint }}">Home</span>
+  </button>
+  <button type="button" onClick="{{ goScan }}" aria-current="{{ scanCurrent }}" style="flex:1;height:50px;border:0;cursor:pointer;background:{{ scanBg }};border-radius:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:inherit">
+    <span style="font-family:'Material Symbols Rounded';font-size:21px;color:{{ scanTint }}" aria-hidden="true">center_focus_weak</span>
+    <span style="font-size:10px;color:{{ scanTint }}">Scan</span>
+  </button>
+  <button type="button" onClick="{{ goHistory }}" aria-current="{{ historyCurrent }}" style="flex:1;height:50px;border:0;cursor:pointer;background:{{ historyBg }};border-radius:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:inherit">
+    <span style="font-family:'Material Symbols Rounded';font-size:21px;color:{{ historyTint }}" aria-hidden="true">stacks</span>
+    <span style="font-size:10px;color:{{ historyTint }}">History</span>
+  </button>
+  <button type="button" onClick="{{ goSettings }}" aria-current="{{ settingsCurrent }}" style="flex:1;height:50px;border:0;cursor:pointer;background:{{ settingsBg }};border-radius:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:inherit">
+    <span style="font-family:'Material Symbols Rounded';font-size:21px;color:{{ settingsTint }}" aria-hidden="true">settings</span>
+    <span style="font-size:10px;color:{{ settingsTint }}">Settings</span>
+  </button>
+</nav>
+
+<sc-if value="{{ sheetResult }}">
+<div role="dialog" aria-label="Result" style="position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.6)">
+<div style="position:absolute;left:0;right:0;top:48px;bottom:0;background:#000;border-radius:30px 30px 0 0;overflow:hidden;animation:ocrUp .42s cubic-bezier(.32,.72,0,1)">
+  <div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none">
+
+    <div style="position:relative;padding:22px 26px 30px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 52%,#96554F 100%);border-radius:30px 30px 34px 34px;overflow:hidden">
+      <div style="position:absolute;right:-70px;top:-56px;width:220px;height:220px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:space-between;margin-bottom:30px">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.1px">Result</div>
+        <button type="button" onClick="{{ closeSheet }}" style="height:34px;padding:0 16px;border:0;cursor:pointer;border-radius:100px;background:rgba(255,255,255,.2);color:#fff;font-family:inherit;font-size:15px;font-weight:600" style-hover="background:rgba(255,255,255,.3)">Done</button>
+      </div>
+      <div style="position:relative">
+        <div style="font-size:13.5px;font-weight:500;color:rgba(255,255,255,.92);margin-bottom:12px">Just analyzed{{ demoTail }}</div>
+        <div style="font-size:76px;font-weight:600;letter-spacing:-3.6px;line-height:.95;font-variant-numeric:tabular-nums;margin-bottom:10px">52%</div>
+        <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;margin-bottom:6px">Leukoplakia</div>
+        <div style="font-size:15.5px;color:rgba(255,255,255,.92)">Moderate risk</div>
+      </div>
+    </div>
+
+    <div style="padding:26px 26px 44px">
+      <sc-if value="{{ demo }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:11px;align-items:flex-start;border:1px solid #2A2A2E;border-radius:16px;padding:16px 18px;margin-bottom:22px">
+        <span style="width:8px;height:8px;border-radius:100px;background:#E39B7B;flex:none;margin-top:6px"></span>
+        <div style="font-size:13.5px;line-height:1.55;color:#8E8E93;text-wrap:pretty"><span style="color:#fff;font-weight:600">Demo result — no trained model installed.</span> These scores are generated placeholders and carry no medical meaning.</div>
+      </div>
+      </sc-if>
+
+      <div style="background:#131316;border-radius:20px;padding:22px 20px">
+        <div style="font-size:16.5px;font-weight:600;letter-spacing:-.25px;margin-bottom:20px">All classes</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:15px">Leukoplakia</span><span style="font-size:14.5px;color:#8E8E93;font-variant-numeric:tabular-nums">52%</span></div>
+            <div style="height:6px;border-radius:3px;background:#26262C;overflow:hidden"><div style="width:52%;height:100%;border-radius:3px;background:linear-gradient(90deg,#B96FDA,#C98A72)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:15px">Erythroplakia</span><span style="font-size:14.5px;color:#8E8E93;font-variant-numeric:tabular-nums">23%</span></div>
+            <div style="height:6px;border-radius:3px;background:#26262C;overflow:hidden"><div style="width:23%;height:100%;border-radius:3px;background:#8B4E9E"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:15px">Oral lichen planus</span><span style="font-size:14.5px;color:#8E8E93;font-variant-numeric:tabular-nums">12%</span></div>
+            <div style="height:6px;border-radius:3px;background:#26262C;overflow:hidden"><div style="width:12%;height:100%;border-radius:3px;background:#6B3E86"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:15px">No visible lesion</span><span style="font-size:14.5px;color:#8E8E93;font-variant-numeric:tabular-nums">7%</span></div>
+            <div style="height:6px;border-radius:3px;background:#26262C;overflow:hidden"><div style="width:7%;height:100%;border-radius:3px;background:#553171"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:15px">Aphthous ulcer (canker sore)</span><span style="font-size:14.5px;color:#8E8E93;font-variant-numeric:tabular-nums">6%</span></div>
+            <div style="height:6px;border-radius:3px;background:#26262C;overflow:hidden"><div style="width:6%;height:100%;border-radius:3px;background:#4B2E8F"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+
+      <sc-if value="{{ demo }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#131316;border-radius:20px;padding:22px 20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px">
+          <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8" aria-hidden="true">medical_services</span>
+          <div style="font-size:16.5px;font-weight:600;letter-spacing:-.25px">When in doubt, see a dentist or physician</div>
+        </div>
+        <div style="font-size:14px;line-height:1.5;color:#8E8E93">Only a professional exam can rule a lesion in or out.</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ live }}">
+      <div style="background:#131316;border-radius:20px;padding:22px 20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px">
+          <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#C77BE8" aria-hidden="true">medical_services</span>
+          <div style="font-size:16.5px;font-weight:600;letter-spacing:-.25px">See a dentist or physician</div>
+        </div>
+        <div style="font-size:14px;line-height:1.5;color:#8E8E93">This result falls in a tier that warrants professional evaluation. Book an appointment soon rather than waiting.</div>
+      </div>
+      </sc-if>
+
+      <div style="height:18px"></div>
+      <div style="font-size:13px;line-height:1.6;color:#76767E;text-wrap:pretty">OCRadar is a screening aid and does not provide medical advice, diagnosis, or treatment. Results come from an on-device image model and can be wrong in either direction. Always consult a dentist or physician about any lesion, discoloration, or symptom that concerns you, regardless of what this app reports.</div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetDetail }}">
+<div role="dialog" aria-label="Scan detail" style="position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.6)">
+<div style="position:absolute;left:0;right:0;top:48px;bottom:0;background:#000;border-radius:30px 30px 0 0;overflow:hidden;animation:ocrUp .42s cubic-bezier(.32,.72,0,1)">
+  <div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none">
+
+    <div style="position:relative;padding:22px 26px 30px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 52%,#96554F 100%);border-radius:30px 30px 34px 34px;overflow:hidden">
+      <div style="position:absolute;right:-70px;top:-56px;width:220px;height:220px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:space-between;margin-bottom:30px">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.1px">Scan detail</div>
+        <button type="button" onClick="{{ closeSheet }}" style="height:34px;padding:0 16px;border:0;cursor:pointer;border-radius:100px;background:rgba(255,255,255,.2);color:#fff;font-family:inherit;font-size:15px;font-weight:600" style-hover="background:rgba(255,255,255,.3)">Done</button>
+      </div>
+      <div style="position:relative">
+        <div style="font-size:13.5px;font-weight:500;color:rgba(255,255,255,.92);margin-bottom:12px">{{ recWhen }}</div>
+        <div style="font-size:76px;font-weight:600;letter-spacing:-3.6px;line-height:.95;font-variant-numeric:tabular-nums;margin-bottom:10px">{{ recPct }}</div>
+        <div style="font-size:26px;font-weight:600;letter-spacing:-.7px;margin-bottom:6px">{{ recName }}</div>
+        <div style="font-size:15.5px;color:rgba(255,255,255,.92)">{{ recTier }}</div>
+      </div>
+    </div>
+
+    <div style="padding:26px 26px 44px">
+      <sc-if value="{{ demo }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:11px;align-items:flex-start;border:1px solid #2A2A2E;border-radius:16px;padding:16px 18px;margin-bottom:22px">
+        <span style="width:8px;height:8px;border-radius:100px;background:#E39B7B;flex:none;margin-top:6px"></span>
+        <div style="font-size:13.5px;line-height:1.55;color:#8E8E93;text-wrap:pretty"><span style="color:#fff;font-weight:600">Demo result.</span> This scan was made without a trained model. Its scores are generated placeholders and carry no medical meaning.</div>
+      </div>
+      </sc-if>
+
+      <div style="background:#131316;border-radius:18px;overflow:hidden">
+        <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px;color:#8E8E93">Confidence</div><div style="font-size:16px;font-variant-numeric:tabular-nums">{{ recPct }}</div></div>
+        <div style="height:1px;background:#1E1E24;margin-left:18px"></div>
+        <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px;color:#8E8E93">Risk tier</div><div style="font-size:16px">{{ recTier }}</div></div>
+        <div style="height:1px;background:#1E1E24;margin-left:18px"></div>
+        <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px;color:#8E8E93">Model</div><div style="font-size:16px">{{ detailModelLabel }}</div></div>
+        <div style="height:1px;background:#1E1E24;margin-left:18px"></div>
+        <div style="display:flex;align-items:center;height:54px;padding:0 18px"><div style="flex:1;font-size:16px;color:#8E8E93">Scanned</div><div style="font-size:16px">{{ recWhen }}</div></div>
+      </div>
+
+      <div style="height:18px"></div>
+      <div style="font-size:13px;line-height:1.6;color:#76767E;text-wrap:pretty">OCRadar is a screening aid and does not provide medical advice, diagnosis, or treatment. Results come from an on-device image model and can be wrong in either direction. Always consult a dentist or physician about any lesion, discoloration, or symptom that concerns you, regardless of what this app reports.</div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetDisclaimer }}">
+<div role="dialog" aria-label="Before you begin" style="position:absolute;inset:0;z-index:70;background:rgba(0,0,0,.65)">
+<div style="position:absolute;left:0;right:0;bottom:0;height:582px;background:#0A0A0C;border-radius:30px 30px 0 0;overflow:hidden;animation:ocrUp .42s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column">
+  <div style="position:relative;padding:26px 26px 24px;background:linear-gradient(152deg,#4B2E8F 0%,#8B4E9E 62%,#96554F 100%);overflow:hidden">
+    <div style="position:absolute;right:-56px;top:-60px;width:190px;height:190px;border-radius:100px;border:1px solid rgba(255,255,255,.14)"></div>
+    <div style="width:44px;height:5px;border-radius:100px;background:rgba(255,255,255,.4);margin:0 auto 22px"></div>
+    <img src="assets/ocrnew.png" alt="" width="46" height="46" style="position:relative;display:block;width:46px;height:46px;border-radius:100px;margin-bottom:16px">
+    <div style="position:relative;font-size:26px;font-weight:600;letter-spacing:-.7px;line-height:1.15;text-wrap:pretty">Before you begin</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:24px 26px;font-size:15px;line-height:1.6;color:#A8A8AE;text-wrap:pretty">OCRadar is a screening aid and does not provide medical advice, diagnosis, or treatment. Results come from an on-device image model and can be wrong in either direction. Always consult a dentist or physician about any lesion, discoloration, or symptom that concerns you, regardless of what this app reports.</div>
+  <div style="padding:0 26px 30px">
+    <button type="button" onClick="{{ closeSheet }}" style="width:100%;height:54px;border:0;cursor:pointer;border-radius:100px;background:linear-gradient(152deg,#7C3FBF,#96554F);color:#fff;font-family:inherit;font-size:16.5px;font-weight:600;letter-spacing:-.15px" style-hover="filter:brightness(1.08)" style-active="transform:scale(.99)">I understand</button>
+  </div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;initialTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;scan&quot;,&quot;history&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;initialSheet&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;result&quot;,&quot;detail&quot;,&quot;disclaimer&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;scanState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;denied&quot;,&quot;unavailable&quot;,&quot;failed&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;States&quot;},&quot;historyEmpty&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { tab: null, stage: null, analyzing: false, sheet: null, recordIndex: 0 };
+
+  get tab() { return this.state.tab ?? (this.props.initialTab || 'home'); }
+  get stage() { return this.state.stage ?? 'live'; }
+  get sheet() { return this.state.sheet ?? (this.props.initialSheet || 'none'); }
+
+  // RootView.swift seedHistory: now-3_600s, now-90_000s, now-400_000s (from 17 Aug 2026, 09:41)
+  static RECORDS = [
+    { name: 'No visible lesion', p: 0.91, tier: 'Low risk', when: '17 Aug 2026, 08:41' },
+    { name: 'Leukoplakia', p: 0.64, tier: 'Moderate risk', when: '16 Aug 2026, 08:41' },
+    { name: 'Erythroplakia', p: 0.55, tier: 'High risk', when: '12 Aug 2026, 18:34' }
+  ];
+
+  openRecord(i) { this.setState({ recordIndex: i, sheet: 'detail' }); }
+
+  analyzeNow() {
+    this.setState({ analyzing: true });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ analyzing: false, sheet: 'result' }), 1200);
+  }
+
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  renderVals() {
+    const tab = this.tab, stage = this.stage, sheet = this.sheet;
+    const scanState = this.props.scanState || 'live';
+    const isDemo = this.props.demo ?? true;
+    const rec = Component.RECORDS[this.state.recordIndex ?? 0];
+    const analyzing = this.state.analyzing;
+    const tint = (on) => (on ? '#fff' : '#8E8E93');
+    const bg = (on) => (on ? '#26262C' : 'transparent');
+    const cur = (on) => (on ? 'page' : 'false');
+    return {
+      demo: isDemo, live: !isDemo,
+      demoTail: isDemo ? ' · demo result' : '',
+      demoToken: isDemo ? ' · Demo' : '',
+      engineLabel: isDemo ? 'Demo' : 'Core ML',
+      versionLabel: isDemo ? 'mock-0.0.0' : '1.0.0',
+      detailModelLabel: isDemo ? 'Demo (mock-0.0.0)' : '1.0.0',
+      isHome: tab === 'home', isScan: tab === 'scan',
+      isHistory: tab === 'history', isSettings: tab === 'settings',
+      homeTint: tint(tab === 'home'), scanTint: tint(tab === 'scan'),
+      historyTint: tint(tab === 'history'), settingsTint: tint(tab === 'settings'),
+      homeBg: bg(tab === 'home'), scanBg: bg(tab === 'scan'),
+      historyBg: bg(tab === 'history'), settingsBg: bg(tab === 'settings'),
+      homeCurrent: cur(tab === 'home'), scanCurrent: cur(tab === 'scan'),
+      historyCurrent: cur(tab === 'history'), settingsCurrent: cur(tab === 'settings'),
+      scanBlocked: scanState !== 'live',
+      scanDenied: scanState === 'denied',
+      scanUnavailable: scanState === 'unavailable',
+      scanFailed: scanState === 'failed',
+      historyEmpty: !!this.props.historyEmpty,
+      historyHasScans: !this.props.historyEmpty,
+      scanCountLabel: this.props.historyEmpty ? 'No scans' : '3 scans',
+      stageLive: stage === 'live' && scanState === 'live',
+      stageReview: stage === 'review',
+      analyzing, notAnalyzing: !analyzing,
+      stepLabel: stage === 'review' ? 'Step 2 of 2' : 'Step 1 of 2',
+      sheetResult: sheet === 'result', sheetDetail: sheet === 'detail',
+      sheetDisclaimer: sheet === 'disclaimer',
+      recName: rec.name, recPct: Math.round(rec.p * 100) + '%',
+      recTier: rec.tier, recWhen: rec.when,
+      recDash: String(Math.round(465 * (1 - rec.p))),
+      goHome: () => this.setState({ tab: 'home' }),
+      goScan: () => this.setState({ tab: 'scan', stage: 'live', analyzing: false }),
+      goHistory: () => this.setState({ tab: 'history' }),
+      goSettings: () => this.setState({ tab: 'settings' }),
+      shoot: () => this.setState({ stage: 'review' }),
+      retake: () => this.setState({ stage: 'live', analyzing: false }),
+      analyze: () => this.analyzeNow(),
+      openRec1: () => this.openRecord(0),
+      openRec2: () => this.openRecord(1),
+      openRec3: () => this.openRecord(2),
+      openDisclaimer: () => this.setState({ sheet: 'disclaimer' }),
+      closeSheet: () => this.setState({ sheet: 'none' })
+    };
+  }
+}
+</script>
+</body>
+</html>

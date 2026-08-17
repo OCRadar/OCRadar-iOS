@@ -104,7 +104,11 @@ struct HistoryView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .ocrQAScrollBottom()
-        .ocrFlushTop()
+        // Gradient band at the top, floating tab bar at the bottom: the top
+        // edge effect stays off at rest and returns once the list scrolls, the
+        // bottom one is soft. The 130pt padding on the footnote below still
+        // does the reaching.
+        .ocrScrollEdges()
     }
 
     /// The newest record overall — its avatar carries the button gradient.
@@ -154,7 +158,7 @@ struct HistoryView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .ocrFlushTop()
+        .ocrScrollEdges()
     }
 
     // MARK: - Grouping
@@ -374,6 +378,10 @@ struct HistoryDetailView: View {
             }
         }
         .scrollIndicators(.hidden)
+        // Sheet, so no tab bar and no status-bar overlap: only the bottom edge
+        // is worth softening, and the body's 44pt bottom padding keeps the
+        // disclaimer clear of the dissolve.
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .background(Theme.canvas)
     }
 

@@ -43,7 +43,10 @@ struct SettingsView: View {
         }
         .scrollIndicators(.hidden)
         .ocrQAScrollBottom()
-        .ocrFlushTop()
+        // Gradient band at the top, floating tab bar at the bottom — top edge
+        // effect off at rest and back once the page scrolls, bottom one soft.
+        // `bottomClearance` still keeps the footnote reachable above the bar.
+        .ocrScrollEdges()
         .background(Theme.canvas)
         .sheet(isPresented: $isShowingDisclaimer) {
             // Honesty rule 4: the copy is `MedicalDisclaimer.full` and nothing

@@ -128,7 +128,13 @@ struct OCRHeaderBand<Trailing: View>: View {
 ///
 /// Every value is passed in by the presenting screen so the header can only
 /// ever show the record it was given (honesty rule 6).
+///
+/// The header panel itself stays a flat gradient — it is content, and its
+/// white-on-gradient labels are measured against those exact stops. Only the
+/// Done capsule floating on top of it is glass.
 struct OCRSheetHeader: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     let eyebrow: String
     let meta: String
     let percentText: String
@@ -148,7 +154,32 @@ struct OCRSheetHeader: View {
                         .font(.system(size: 15, weight: .semibold))
                         .padding(.horizontal, Theme.spacingM)
                         .frame(minWidth: Theme.minTarget, minHeight: 34)
-                        .background(.white.opacity(0.2), in: .capsule)
+                        // Untinted, for the reason spelled out on Home's hero
+                        // gear button: over the header's `#724398` a `white 20%`
+                        // tint lifted the capsule to `#AF7BC8` and dropped the
+                        // white label to **3.24:1**, below the 4.5 floor and
+                        // below the 4.40:1 the flat fill measured. Untinted it
+                        // sits at `#9457B6` for **4.89:1** — better than the
+                        // treatment it replaces — and the specular rim is what
+                        // makes it read as a button.
+                        //
+                        // The Reduce Transparency fallback is *not* that flat
+                        // `white 20%`. This is the only way out of the sheet
+                        // other than a swipe, its 15/600 label is body text,
+                        // and the wash measures 4.40:1 on the header's mid
+                        // tones and 4.15:1 on the `#7C479B` the capsule
+                        // actually sits on — under the floor, and unlike the
+                        // Scan surfaces this backdrop is `Theme.hero` every
+                        // time, so it fails deterministically rather than only
+                        // over a bright photo. `gradientControlFill` is the
+                        // gradient's own deepest stop, opaque, and holds the
+                        // white label at 10.1:1 wherever the capsule lands.
+                        .ocrGlass(
+                            .capsule,
+                            interactive: true,
+                            fallback: Theme.gradientControlFill,
+                            reduceTransparency: reduceTransparency
+                        )
                         // 34pt capsule, 44pt touch target — this is the only
                         // way out of the sheet other than a swipe. The outer
                         // negative padding keeps the capsule on the measured

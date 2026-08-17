@@ -27,6 +27,73 @@ enum AppTab: String, Hashable {
     case home, scan, history, settings
 }
 
+extension View {
+    /// What every full-screen scrolling tab needs from its scroll container so
+    /// it meets the app's chrome correctly at both ends. The two edges are
+    /// treated differently on purpose. See `OCRScrollEdges`.
+    ///
+    /// This replaces the earlier `ocrFlushTop()`, which hid the effect on
+    /// `.all` edges and so suppressed the bottom one along with the top.
+    func ocrScrollEdges() -> some View {
+        modifier(OCRScrollEdges())
+    }
+}
+
+/// The scroll-edge treatment shared by Home, History and Settings.
+///
+/// **Bottom — `.soft`, always.** The tab bar floats over the page instead of
+/// reserving a safe-area inset, so without an edge effect the content ran out on
+/// a hard cut behind it. `.soft` dissolves the last of the page under the
+/// capsule. It softens the transition only: screens still pad their last element
+/// clear of the bar by `Theme.tabBarClearance`, because the effect changes how
+/// content *looks* under the bar, not whether it can be reached.
+///
+/// **Top — off at rest, on once scrolled.** Both halves of that are load
+/// bearing, and shipping only the first half was a real defect.
+///
+/// *Off at rest,* because Home, History and Settings all open with a gradient
+/// panel or band that runs to the physical top edge, and iOS 26's scroll edge
+/// effect veils it: the sampled hero measured `#2F1C54` under the status bar
+/// against `#4B2E8F` just below it, a 36% darkening of a colour
+/// `design/README.md` pins exactly. The paired `ignoresSafeArea(edges: .top)` is
+/// what lets the gradient start at that edge at all, so the design's 96pt top
+/// inset is paid once rather than twice.
+///
+/// *On once scrolled,* because that same pair — no top safe-area inset and no
+/// edge effect — leaves scrolled page content rendering straight under the clock
+/// and the status icons with nothing between them. Parked at the foot of the
+/// page (`-qaScrollBottom 1`, or just scrolling there) Settings put a row's
+/// light label across "9:41" and the Wi-Fi and battery glyphs, and Home slid the
+/// solid-white "New scan" capsule under white status-bar glyphs. Neither layer
+/// was readable.
+///
+/// The switch is at the first point of scroll rather than at some panel-height
+/// threshold, so there is no window in which content has reached the status bar
+/// but the effect has not. The design's measurement is a measurement of the
+/// screen *at rest*, and at rest — including after a scroll-to-top — the band
+/// still renders at its exact stops.
+///
+/// The effect is the system's own and carries no animation of ours, so there is
+/// nothing here to gate on Reduce Motion.
+private struct OCRScrollEdges: ViewModifier {
+    /// Whether the page has moved off its top. Rubber-band overscroll drives
+    /// `contentOffset.y` negative, so a small positive threshold keeps this from
+    /// flapping while the page bounces at rest.
+    @State private var isScrolled = false
+
+    func body(content: Content) -> some View {
+        content
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y > 1
+            } action: { _, scrolled in
+                isScrolled = scrolled
+            }
+            .ignoresSafeArea(edges: .top)
+            .scrollEdgeEffectHidden(!isScrolled, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+    }
+}
+
 /// The tab-switching setter published through the environment, called as
 /// `selectTab(.scan)`.
 ///
@@ -181,7 +248,7 @@ private struct QAAutomationHooks: ViewModifier {
     func body(content: Content) -> some View {
         content
             .task {
-                guard let sample = Self.sampleImage() else { return }
+                guard let sample = QASampleImage.gradient() else { return }
                 if UserDefaults.standard.bool(forKey: "qaSeedHistory") {
                     seedHistory(with: sample)
                 }
@@ -235,33 +302,6 @@ private struct QAAutomationHooks: ViewModifier {
             )
         }
         try? modelContext.save()
-    }
-
-    /// A deterministic gradient bitmap standing in for a photograph.
-    private static func sampleImage() -> CGImage? {
-        let side = 640
-        guard let context = CGContext(
-            data: nil,
-            width: side,
-            height: side,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-        let colors = [
-            CGColor(red: 0.85, green: 0.45, blue: 0.40, alpha: 1),
-            CGColor(red: 0.55, green: 0.20, blue: 0.25, alpha: 1),
-        ] as CFArray
-        if let gradient = CGGradient(colorsSpace: nil, colors: colors, locations: [0, 1]) {
-            context.drawLinearGradient(
-                gradient,
-                start: .zero,
-                end: CGPoint(x: side, y: side),
-                options: []
-            )
-        }
-        return context.makeImage()
     }
 }
 #endif

@@ -50,9 +50,19 @@ struct MedicalDisclaimerSheet: View {
                     .foregroundStyle(Self.bodyColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Theme.pageMargin)
-                    .padding(.vertical, Theme.spacingL)
+                    .padding(.top, Theme.spacingL)
+                    // Deeper than the 24 above it: the soft bottom edge effect
+                    // below dissolves the last few points of the scroll view,
+                    // and this is legal copy — the closing line has to clear
+                    // the fade completely, not sit in it.
+                    .padding(.bottom, Theme.spacingXL)
             }
             .scrollIndicators(.hidden)
+            // The notice runs under the "I understand" footer rather than
+            // stopping dead above it, so there is a visible cue that the copy
+            // continues. Bottom only: a soft top edge would fade the notice's
+            // opening line under the gradient header.
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
             Button(actionTitle, action: onAction)
                 .buttonStyle(OCRPrimaryButtonStyle())
                 .padding(.horizontal, Theme.pageMargin)

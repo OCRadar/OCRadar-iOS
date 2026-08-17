@@ -42,6 +42,10 @@ struct ResultView: View {
         }
         .scrollIndicators(.hidden)
         .ocrQAScrollBottom()
+        // Sheet, so no tab bar and no status-bar overlap: only the bottom edge
+        // is worth softening. `SheetBodyInsets` pads 44 below the disclaimer,
+        // which keeps the last line clear of the dissolve.
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .background(Theme.canvas)
         .foregroundStyle(Theme.textPrimary)
         .presentationBackground(Theme.canvas)

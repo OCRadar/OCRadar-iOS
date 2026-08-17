@@ -78,6 +78,23 @@ nonisolated enum Theme {
         Color(hex: 0x553171), Color(hex: 0x4B2E8F)
     ]
 
+    /// Opaque fill for a *text* control that floats on one of the gradient
+    /// surfaces, used when Reduce Transparency turns its glass off.
+    ///
+    /// The design draws those controls as white washes, which hold over the
+    /// gradient's deep end and not over its light one — the wash rides the ramp
+    /// up while the white label cannot follow. `white 20%` composited on the
+    /// `#7C479B` the sheets' Done capsule actually sits on gives `#9668AF`, and
+    /// white on that measures **4.15:1**, under `design/README.md`'s 4.5:1 floor
+    /// for body text. This is the gradients' own deepest stop, opaque, so the
+    /// ratio no longer depends on where along the ramp the control lands: white
+    /// on it measures **10.1:1** everywhere.
+    ///
+    /// Icon-only chrome on a gradient (Home's hero gear) keeps its white wash —
+    /// a glyph answers to the 3:1 non-text floor, which `white 16%` clears at
+    /// 4.40:1 on the same header.
+    static let gradientControlFill = Color(hex: 0x4B2E8F)
+
     /// Text on any gradient surface: white, never below 92% opacity.
     static func onGradient(_ opacity: Double = 1) -> Color {
         .white.opacity(max(opacity, 0.92))
@@ -164,19 +181,11 @@ struct OCRGradient: View {
 }
 
 extension View {
-    /// What a screen whose gradient runs to the very top edge needs from its
-    /// scroll container.
-    ///
-    /// Two things, both invisible until you measure them: the container must
-    /// ignore the top safe area, or the band starts 62pt down and the design's
-    /// 96pt top inset is paid twice; and iOS 26's scroll edge effect must be
-    /// off, or it veils the top of the gradient — the sampled hero measured
-    /// `#2F1C54` under the status bar against `#4B2E8F` just below it, a 36%
-    /// darkening of a colour the spec pins exactly.
-    func ocrFlushTop() -> some View {
-        ignoresSafeArea(edges: .top)
-            .scrollEdgeEffectHidden(true, for: .all)
-    }
+    // The scroll-edge treatment every full-screen tab shares lives with the
+    // chrome that motivates it, in `RootView.ocrScrollEdges()`. It supersedes
+    // the `ocrFlushTop()` that used to sit here, which hid the edge effect on
+    // `.all` edges and so suppressed the bottom one — the one the floating tab
+    // bar needs — along with the top.
 
     /// QA-automation hook (debug builds only): `-qaScrollBottom 1` parks every
     /// scrolling screen at its last element, so a headless sweep can check

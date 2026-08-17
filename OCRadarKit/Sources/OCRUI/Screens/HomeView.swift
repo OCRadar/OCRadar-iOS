@@ -35,8 +35,10 @@ struct HomeView: View {
         .ocrQAScrollBottom()
         .background(Theme.canvas)
         // The hero is full-bleed to the top edge; its 96pt top padding is what
-        // clears the status bar.
-        .ocrFlushTop()
+        // clears the status bar, so the top edge effect stays off while the page
+        // is at rest and comes back the moment anything scrolls under there. The
+        // bottom one is on and soft, so the page dissolves under the tab bar.
+        .ocrScrollEdges()
         .sheet(item: $detailRecord) { record in
             HistoryDetailView(record: record)
                 .presentationCornerRadius(Theme.sheetCorner)
@@ -131,7 +133,7 @@ struct HomeView: View {
                     .font(.system(size: 19))
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
-                    .background(.white.opacity(0.16), in: .circle)
+                    .modifier(HeroGlassCircle())
                     // 34pt visual, 44pt touch target; the negative padding
                     // keeps the circle on the 26pt page margin.
                     .frame(width: Theme.minTarget, height: Theme.minTarget)
@@ -446,6 +448,40 @@ struct HomeView: View {
         link.underlineStyle = Text.LineStyle.single
         link.link = MedicalDisclaimerSheet.linkURL
         return text + link
+    }
+}
+
+// MARK: - Hero chrome
+
+/// Liquid Glass for the hero's settings button — the one surface on Home that
+/// qualifies. It *floats over* the gradient panel rather than being part of the
+/// page, which is what the material is for, and the gradient gives it something
+/// to refract; the flat cards below it sit on true black, where glass has
+/// nothing to work with and would only mud them.
+///
+/// Untinted, though the obvious move was to tint it with the `white 16%` the
+/// flat fill used. Both were sampled on the simulator over the hero's `#81499C`:
+/// the tinted circle lifted to `#AF7BC7` and the white glyph fell to **3.24:1**,
+/// worse than the flat fill it replaced. Untinted it settles at `#9D5EB8` for
+/// **4.4:1**, holding the flat treatment's contrast while the specular rim does
+/// the work of saying "control". Regular glass over a mid-tone gradient already
+/// brightens; a white tint only pushes it further toward the glyph.
+///
+/// With Reduce Transparency on it falls all the way back to the flat
+/// `white 16%` fill.
+///
+/// No `glassEffectID` or morph here, so there is no motion to gate on Reduce
+/// Motion — the button is a single static circle.
+private struct HeroGlassCircle: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        content.ocrGlass(
+            .circle,
+            interactive: true,
+            fallback: .white.opacity(0.16),
+            reduceTransparency: reduceTransparency
+        )
     }
 }
 

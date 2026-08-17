@@ -14,10 +14,53 @@ import UIKit
 /// Layout follows the design spec's Scan screen: band 150 tall from the top of
 /// the screen, stage inset 16 with 166 above and 104 below so it clears the
 /// floating tab bar.
+///
+/// This is the one screen where Liquid Glass earns its keep: the controls float
+/// over a live camera feed or a captured photo, so there is real content for the
+/// glass to refract. Four surfaces qualify — the status pill, the library
+/// circle, the shutter ring and the analyzing capsule. The gradient band above,
+/// the stage itself and the three camera-fallback layouts stay flat and opaque,
+/// exactly as `design/README.md` specifies, and so do "Retake" and "Analyze":
+/// see `reviewActions(for:)` for the measurement that put them back.
+///
+/// Every glass surface here carries a tint rather than being left bare, because
+/// "adapts to its backdrop" cuts both ways — the backdrop can also be a
+/// blown-out photograph, and untinted glass follows it straight up into the
+/// label. The two that must hold a white label over an arbitrary photo, the
+/// status pill and the analyzing capsule, are tinted toward `stageFill`; the
+/// shutter ring keeps the accent, since its solid gradient core carries the
+/// control whatever the ring does. The per-surface numbers are on each one.
+///
+/// The material itself is `ocrGlass(_:...)` in `Components/OCRGlass.swift`, so
+/// this screen, the tab bar and the sheet headers cannot drift into three
+/// different ideas of what the app's glass is. The single `reduceTransparency`
+/// read below feeds every call here, so two halves of one control can never
+/// disagree about which treatment they are in.
+///
+/// **Reduce Transparency falls back to `surfaceRaised`, not to the design's
+/// washes.** Everywhere else in the app the fallback is literally the flat fill
+/// the glass replaced, because that fill was measured against a known backdrop.
+/// This screen has no known backdrop: the stage is a live camera frame or a
+/// photograph the user chose. The spec's `white 8%` pill and `accent 16%`
+/// analyzing capsule were drawn over a dark stand-in stage, and over a bright
+/// frame they composite to the exact washes the tints above exist to fix —
+/// measured on the `-qaScanStage review` frame, the pill's `numeralMuted` label
+/// falls to 3.17:1 and the capsule's white label to 3.31:1, against 7.50:1 and
+/// 8.07:1 on the glass path. Turning an accessibility setting **on** must not
+/// make those labels harder to read. `surfaceRaised` (`#26262C`) is opaque, so
+/// it is the one treatment whose contrast does not depend on the photograph at
+/// all: `numeralMuted` on it measures 12.2:1 and white 15.0:1, whatever is
+/// underneath. It is also the token "Retake" already uses on this same stage,
+/// for this same reason.
 struct ScanView: View {
     @Environment(\.lesionClassifier) private var classifier
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+
+    /// Reduce Transparency swaps every glass surface below for the flat opaque
+    /// fill it replaced. Read once here rather than in each helper so the
+    /// fallback can never diverge between two pieces of the same control.
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var camera = CameraService()
     @State private var capturedImage: CGImage?
@@ -63,7 +106,12 @@ struct ScanView: View {
             // indicator — otherwise the stage lost 34pt of height.
             .ignoresSafeArea()
         }
-        .task { await camera.start() }
+        .task {
+            // No-op unless a `-qaScanStage` argument is present, and compiled
+            // out of Release entirely.
+            applyQAScanStage()
+            await camera.start()
+        }
         .onDisappear { camera.stop() }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
@@ -114,6 +162,26 @@ struct ScanView: View {
         UserDefaults.standard.string(forKey: "qaScanStage") == "live"
         #else
         false
+        #endif
+    }
+
+    /// The other half of the same hook: `-qaScanStage review` and
+    /// `-qaScanStage analyzing` drop a stand-in photo onto the stage and, for
+    /// the second, pin the analyzing state.
+    ///
+    /// Same argument as `forcesLiveStage`. Reaching either state for real needs
+    /// a camera the simulator does not have, or a tap through the system photo
+    /// picker that a headless sweep cannot perform — so "Retake", "Analyze" and
+    /// the analyzing capsule were the three controls on this screen that could
+    /// never be looked at. `analyzing` deliberately does *not* call `classify`:
+    /// it holds the capsule on screen to be measured instead of letting the
+    /// mock resolve it in a few milliseconds.
+    private func applyQAScanStage() {
+        #if DEBUG
+        let stage = UserDefaults.standard.string(forKey: "qaScanStage")
+        guard stage == "review" || stage == "analyzing" else { return }
+        capturedImage = QASampleImage.gradient()
+        isAnalyzing = stage == "analyzing"
         #endif
     }
 
@@ -218,40 +286,77 @@ struct ScanView: View {
         .accessibilityHidden(true)
     }
 
+    /// The library circle and the shutter are two glass siblings 40pt apart, so
+    /// they share one `GlassEffectContainer`: it renders them in a single pass
+    /// and lets them sample each other's edges instead of stacking two
+    /// independent blurs over the same frame of camera feed. `spacing: 12` is
+    /// well under the 40pt gap, so the two stay visually distinct rather than
+    /// merging into one blob.
     private var captureControls: some View {
-        HStack(spacing: 40) {
-            libraryCircleButton
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 40) {
+                libraryCircleButton
 
-            shutterButton
+                shutterButton
 
-            // Balances the library button so the shutter stays optically
-            // centred in the stage.
-            Color.clear
-                .frame(width: 48, height: 48)
-                .accessibilityHidden(true)
+                // Balances the library button so the shutter stays optically
+                // centred in the stage.
+                Color.clear
+                    .frame(width: 48, height: 48)
+                    .accessibilityHidden(true)
+            }
         }
         .frame(maxWidth: .infinity)
     }
 
+    /// Tinted toward `stageFill` for the same reason as the status pill it
+    /// shares the stage with: untinted, this circle follows a bright camera
+    /// frame up to around `#D8796E`, where its `numeralMuted` glyph measures
+    /// 2.47:1 — under the 3:1 a non-text control needs. The two are the only
+    /// chrome sitting directly on the live feed, so they take the same
+    /// treatment rather than each guessing at one.
+    ///
+    /// The Reduce Transparency fallback is the opaque `surfaceRaised`, not the
+    /// design's `white 8%` wash, for the reason in this type's doc comment: the
+    /// wash rides up with the same bright frame and puts this glyph back at the
+    /// 2.47:1 the tint was added to fix.
     private var libraryCircleButton: some View {
-        PhotosPicker(selection: $pickerItem, matching: .images) {
+        // Read out of the closure: `PhotosPicker`'s label builder is
+        // `@Sendable`, so the main-actor-isolated environment value cannot be
+        // touched inside it. A captured `Bool` can.
+        let isFlat = reduceTransparency
+        return PhotosPicker(selection: $pickerItem, matching: .images) {
             Image(systemName: "photo.on.rectangle")
                 .font(.system(size: 21))
                 .foregroundStyle(Theme.numeralMuted)
                 .frame(width: 48, height: 48)
-                .background(.white.opacity(0.08), in: .circle)
+                .ocrGlass(
+                    .circle,
+                    tint: Theme.stageFill.opacity(0.5),
+                    interactive: true,
+                    fallback: Theme.surfaceRaised,
+                    reduceTransparency: isFlat
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Choose a photo from your library")
     }
 
+    /// The 60pt core stays solid `Theme.button` — it is the primary action on
+    /// the screen and must never depend on what is behind it. Only the 78pt
+    /// ring turns to glass.
+    ///
+    /// The ring uses `.regular` tinted with the accent, not `.clear`: clear
+    /// glass has almost nothing to refract on the dark placeholder stage
+    /// (`#0C0C0F`, and the whole canvas behind it is true black), where it
+    /// rendered as an all-but-invisible smudge. Regular glass plus the design's
+    /// 2pt accent ring keeps the shutter legible on an unstarted stage *and*
+    /// over a bright live feed — the one treatment that survives both.
     private var shutterButton: some View {
         Button {
             Task { await capturePhoto() }
         } label: {
             ZStack {
-                Circle()
-                    .fill(Theme.accent.opacity(0.12))
                 Circle()
                     .strokeBorder(Theme.accent.opacity(0.55), lineWidth: 2)
                 Theme.button
@@ -259,13 +364,36 @@ struct ScanView: View {
                     .frame(width: 60, height: 60)
             }
             .frame(width: 78, height: 78)
+            .ocrGlass(
+                .circle,
+                tint: Theme.accent.opacity(0.16),
+                interactive: true,
+                fallback: Theme.accent.opacity(0.12),
+                reduceTransparency: reduceTransparency
+            )
         }
         .buttonStyle(.plain)
         .disabled(camera.state != .running || isCapturing)
         .accessibilityLabel("Capture photo")
     }
 
-    /// Top-left capsule: a white-8% pill with a pulsing dot and one short line.
+    /// Top-left capsule: a glass pill with a pulsing dot and one short line.
+    ///
+    /// **Tinted with `stageFill`, and that tint is the whole point.** Regular
+    /// glass adapts to its backdrop, which cuts both ways: over the dark live
+    /// stage untinted glass sampled `#2B2B2F` and the `#E8E6EC` label measured
+    /// 11.4:1, but over the bright review photo the same material rode up to
+    /// `#C86667` and the label fell to **3.06:1** — no better than the flat
+    /// `white 8%` it replaced, which measured 3.06:1 on the same frame. Both
+    /// are under the spec's floor.
+    ///
+    /// Tinting toward the stage's own `#0C0C0F` stops the pill following a
+    /// bright photo upward, so one treatment holds on a dark feed and a blown-out
+    /// one alike. The label colour is unchanged.
+    ///
+    /// The Reduce Transparency fallback is the opaque `surfaceRaised`, not that
+    /// `white 8%` — restoring it would restore the 3.06:1 this comment already
+    /// rejects. See this type's doc comment.
     private func statusPill(text: String, dot: Color) -> some View {
         HStack(spacing: 8) {
             OCRStatusDot(color: dot, pulsing: true)
@@ -278,7 +406,12 @@ struct ScanView: View {
         // left it spilling out of the capsule onto the camera preview, where
         // nothing guarantees contrast.
         .frame(minHeight: pillHeight)
-        .background(.white.opacity(0.08), in: .capsule)
+        .ocrGlass(
+            .capsule,
+            tint: Theme.stageFill.opacity(0.5),
+            fallback: Theme.surfaceRaised,
+            reduceTransparency: reduceTransparency
+        )
         .accessibilityElement(children: .combine)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(Theme.stageInset)
@@ -302,7 +435,13 @@ struct ScanView: View {
                 Spacer(minLength: Theme.spacingM)
 
                 if isAnalyzing {
-                    analyzingCapsule
+                    // Its own container: the analyzing capsule is the only
+                    // glass in this slot now that the two review buttons are
+                    // flat again, and a container around a flat row would be a
+                    // no-op that only reads as if something glassy lived there.
+                    GlassEffectContainer(spacing: 12) {
+                        analyzingCapsule
+                    }
                 } else {
                     reviewActions(for: image)
                 }
@@ -314,6 +453,24 @@ struct ScanView: View {
         }
     }
 
+    /// Dark-tinted glass, and the one place this pass knowingly departs from a
+    /// literal value in `design/README.md`.
+    ///
+    /// The spec draws this capsule as `rgba(199,123,232,.16)` — a purple wash
+    /// over the captured photo. Measured on the stand-in frame that wash puts
+    /// white 16/600 at **2.47:1**, and accent-tinted glass at **2.91:1**; the
+    /// wash is light, the photo under it is light, and nothing in either
+    /// treatment stops the two adding up. The same document sets the floor
+    /// those numbers are failing (`all body text ≥4.5:1`), so the floor wins:
+    /// tinted toward `stageFill` the capsule holds the label whatever the photo
+    /// does.
+    ///
+    /// The purple is not lost — it moves to the pulsing accent dot, which the
+    /// spec also calls for, and this now matches the status pill on the same
+    /// stage. The Reduce Transparency fallback is the opaque `surfaceRaised`
+    /// rather than the spec's 16% wash: the wash is the same 2.47:1 treatment
+    /// this comment already rejects, and turning an accessibility setting on
+    /// must not restore it. See this type's doc comment.
     private var analyzingCapsule: some View {
         HStack(spacing: 11) {
             OCRStatusDot(color: Theme.accent, pulsing: true)
@@ -322,12 +479,28 @@ struct ScanView: View {
                 .foregroundStyle(Theme.textPrimary)
         }
         .frame(maxWidth: .infinity, minHeight: actionHeight)
-        .background(Theme.accent.opacity(0.16), in: .capsule)
+        .ocrGlass(
+            .capsule,
+            tint: Theme.stageFill.opacity(0.5),
+            fallback: Theme.surfaceRaised,
+            reduceTransparency: reduceTransparency
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Analyzing on device")
     }
 
     /// "Retake" and "Analyze" split the row 1 : 1.4, per the spec.
+    ///
+    /// **Both stay flat.** "Retake" was glass for one round of this pass and it
+    /// was the clearest regression in it: over the review photo the material
+    /// sampled `#D8796E` and white 16/600 fell to **3.05:1**, against the
+    /// **11.9:1** the opaque `surfaceRaised` capsule guarantees on any photo.
+    /// These two buttons sit on the largest, least predictable backdrop in the
+    /// app — a full-bleed photograph the user chose — and an opaque capsule is
+    /// the only thing that makes their contrast independent of it. Glass is for
+    /// the small chrome floating *over* this stage, not for the two controls
+    /// the whole screen resolves to. "Analyze" keeps the solid `buttonGradient`
+    /// for the same reason, plus it must read as the primary.
     private func reviewActions(for image: CGImage) -> some View {
         GeometryReader { proxy in
             let gap = Theme.spacingS
@@ -337,7 +510,7 @@ struct ScanView: View {
                 Button("Retake") {
                     capturedImage = nil
                 }
-                .buttonStyle(OCRSecondaryButtonStyle())
+                .buttonStyle(OCRSecondaryButtonStyle(height: actionHeight))
                 .frame(width: retakeWidth)
 
                 Button("Analyze") {
@@ -396,6 +569,13 @@ struct ScanView: View {
 
     /// Shared blocked-camera layout: a small static radar glyph, a title, an
     /// explanation, and one or two capsule actions — centred in the stage.
+    ///
+    /// Deliberately **not** glass, primary or secondary. All three fallbacks
+    /// mean there is no preview: the stage is a flat `#0C0C0F` panel on a true
+    /// black canvas, so glass has nothing to refract and renders as a muddy
+    /// grey wash that reads *less* clearly than `surfaceRaised` does. These are
+    /// also the screens a blocked user is stuck on, which is the worst place to
+    /// trade legibility for material.
     private func fallbackStage<Actions: View>(
         struckThrough: Bool,
         title: String,

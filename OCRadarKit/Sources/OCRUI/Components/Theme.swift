@@ -40,10 +40,15 @@ import SwiftUI
 /// WCAG 2.x relative luminance, computed, not estimated.
 ///
 /// The resulting ladder, darkest first:
-/// `stageFill` 2.7 · `canvas` 4.0 · `surface` 9.1 · `stageBorder` 12.7 ·
-/// `divider` 14.0 · `surfaceRaised` 16.8 · `radarRing` 16.9 ·
-/// `noticeBorder` 18.7. The floating chrome sits off this ladder on purpose —
-/// see `chromeTint`.
+/// `stageFill` 2.7 · `canvas` 4.0 · `medicalNoticeFill` 7.5 · `surface` 9.1 ·
+/// `stageBorder` 12.7 · `divider` 14.0 · `surfaceRaised` 16.8 ·
+/// `radarRing` 16.9 · `noticeBorder` 18.7. The floating chrome sits off this
+/// ladder on purpose — see `chromeTint`.
+///
+/// `medicalNoticeFill` is on the ladder rather than beside it because that is
+/// the whole point of the value: the medical notice is red, but it is never
+/// *raised*, so it has to sit below `surface` in the same ordering every other
+/// plane obeys. See the `medicalNotice…` tokens for the rest of that argument.
 nonisolated enum Theme {
     // MARK: Colour — the violet-ink family (hue 253–260°, sat 12–21%)
     //
@@ -95,6 +100,95 @@ nonisolated enum Theme {
     /// Outline of the demo notice card — a hair above `divider` so the card
     /// reads as outlined rather than filled.
     static let noticeBorder = Color(hex: 0x302B3B)
+
+    // MARK: Medical notice — the one red object in the app
+    //
+    // These three back `OCRMedicalNotice` and nothing else. They are deliberately
+    // *not* named `noticeInk` / `noticeFill`: `noticeBorder` above is already
+    // taken by the demo-mode notice card's grey outline, and a red `noticeInk`
+    // sitting beside a grey `noticeBorder` would read as one set of tokens for
+    // one component. The `medicalNotice` prefix keeps the two apart.
+    //
+    // # Why red is safe here
+    //
+    // The restyle removed tier colour entirely — `RiskLevel.displayLabel` renders
+    // "Low risk" / "Moderate risk" / "High risk" as plain text in the ambient
+    // ink colours, and there is no `Theme` colour for a tier (see the note on
+    // `RiskLevel.displayLabel`). So red is not currently spoken anywhere in the
+    // app, and the medical notice can claim it outright without a low-risk result
+    // inheriting an alarm colour it did not earn.
+    //
+    // That claim has to survive a tier palette coming back. It does, because the
+    // notice is separated from a tier by **form**, not by hue: a tier is inline
+    // text inside a sentence, and the notice is a bordered rectangle with a
+    // warning glyph and a fixed title. Should a high-risk red ever be introduced,
+    // it must be a *text* colour only — never a border, never a fill — so the two
+    // stay distinguishable at a glance even to a reader who cannot separate them
+    // by hue at all.
+    //
+    // # The family
+    //
+    // Hue is locked to the hero gradient's warm stop (`#96554F`, hue 5.1°), so
+    // the notice is the app's own red rather than the system's `#FF3B30`
+    // (hue 3.2°) bolted on. Saturation and lightness are then solved for the
+    // contrast floors, not picked by eye. All ratios are WCAG 2.x, computed
+    // against the surfaces the notice is actually drawn on.
+
+    /// Notice title and warning glyph. Hue 5.0° — the warm stop's hue at full
+    /// saturation, lifted to L\* 66.8 until it clears the 4.5:1 body floor on
+    /// every ground it can land on.
+    ///
+    /// **7.59:1** on `canvas` · **6.88:1** on `surface` · **7.08:1** on
+    /// `medicalNoticeFill` · 7.24:1 on the disclaimer sheet's `#15131C` ·
+    /// 5.69:1 on `surfaceRaised` · 7.35:1 / 6.64:1 on canvas and surface under
+    /// the worst case of `bloom`.
+    ///
+    /// A saturated `#FF3B30` was measured first and rejected: 5.44:1 on
+    /// `canvas` but **4.93:1** on `surface`, which clears the floor by 0.43 —
+    /// no margin at all for the bloom, and it fails outright on
+    /// `surfaceRaised` (3.55:1). This is that red lightened until every ground
+    /// in the app has room to spare.
+    static let medicalNoticeInk = Color(hex: 0xFF7A6E)
+
+    /// The notice's 1.5pt border. A non-text element, so the floor is 3:1, and
+    /// it is the outline that has to carry the object when the fill is nearly
+    /// invisible — as it is when the notice sits on a `surface` card.
+    ///
+    /// **4.31:1** on `canvas` · **3.91:1** on `surface` · **4.02:1** against
+    /// `medicalNoticeFill` on the inside · 3.23:1 on `surfaceRaised` ·
+    /// 4.18:1 / 3.77:1 under `bloom`.
+    ///
+    /// The ink taken down to L\* 50.1 with saturation pulled back to 49.6% —
+    /// between the warm stop's 31% and the ink's 100%. Full saturation at this
+    /// lightness reads as a drawn line rather than an edge; the warm stop's own
+    /// saturation reads as brown.
+    static let medicalNoticeBorder = Color(hex: 0xC2554A)
+
+    /// The notice's background wash. `medicalNoticeInk` at **6% over `canvas`**,
+    /// resolved to an opaque value the way `chromeFill` resolves the tab bar's
+    /// glass — so the wash cannot ride up whatever it happens to be stacked on,
+    /// and so nothing here depends on a material that Reduce Transparency turns
+    /// off.
+    ///
+    /// L\* **7.51**, which is the load-bearing number: `surface` is L\* 9.05, so
+    /// the notice is always *darker* than a card and can never read as one
+    /// raised off the page. Against `canvas` (L\* 3.97) it is a clear plane
+    /// change; against a `surface` card it is a whisper (1.03:1) and the border
+    /// does the work, which is the intended division of labour.
+    ///
+    /// The notice sets its body in `textPrimary`, which measures **18.01:1**
+    /// here, and its title and glyph in `medicalNoticeInk` at **7.08:1**. The
+    /// fainter inks are recorded only as headroom, since nothing draws on this
+    /// fill but `OCRMedicalNotice`: `textSecondary` 6.14:1, `textTertiary`
+    /// 4.90:1 — both still over the 4.5:1 floor.
+    ///
+    /// It resolves to hue 327° rather than the family's 5°, because a 6% red
+    /// wash cannot outvote the violet ink's own blue channel at this darkness.
+    /// That is correct: at L\* 7.5 the hue is not perceptible as either red or
+    /// violet, and forcing it to 5° by draining the blue would take the one
+    /// surface in the app that is *supposed* to belong to both families and
+    /// make it the only near-neutral plane on the page.
+    static let medicalNoticeFill = Color(hex: 0x1D1419)
 
     // MARK: Signature — the three tokens that carry the hero's language outward.
     //
@@ -431,20 +525,4 @@ nonisolated extension RiskLevel {
 
 // MARK: - Type
 //
-// Tracking has no Font-level representation in SwiftUI, so it is applied at
-// each call site:
-//   Text("91%").font(.ocrHeroNumeral()).tracking(-3.6).monospacedDigit()
-//   Text("Scan").font(.ocrScreenTitle()).tracking(-0.7)
-//   Text("Earlier scans").font(.ocrSectionHead()).tracking(-0.45)
-
-extension Font {
-    static func ocrHeroNumeral() -> Font { .system(size: 76, weight: .semibold) }
-    static func ocrScreenTitle() -> Font { .system(size: 26, weight: .semibold) }
-    static func ocrSectionHead() -> Font { .system(size: 21, weight: .semibold) }
-    static func ocrCardTitle() -> Font { .system(size: 16.5, weight: .semibold) }
-    static func ocrRowTitle() -> Font { .system(size: 16, weight: .medium) }
-    static func ocrBody() -> Font { .system(size: 14.5) }
-    static func ocrMeta() -> Font { .system(size: 13.5) }
-    static func ocrSectionLabel() -> Font { .system(size: 13, weight: .semibold) }
-    static func ocrFootnote() -> Font { .system(size: 13) }
-}
+// The type scale lives in `OCRType.swift`, as `OCRTextStyle` + `.ocrFont(_:)`.

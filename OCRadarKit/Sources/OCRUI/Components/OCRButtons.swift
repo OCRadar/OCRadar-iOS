@@ -50,7 +50,7 @@ struct OCRPrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16.5, weight: .semibold))
+            .ocrFont(.cardTitle)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: height)
             .ocrGradientBackground(Theme.button, in: .capsule)
@@ -66,7 +66,7 @@ struct OCRInverseButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16.5, weight: .semibold))
+            .ocrFont(.cardTitle)
             .foregroundStyle(Color(hex: 0x2A1745))
             .frame(maxWidth: .infinity, minHeight: height)
             .background(.white, in: .capsule)
@@ -86,7 +86,7 @@ struct OCRSecondaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .ocrFont(.rowTitle.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: height)
             .background(Theme.surfaceRaised, in: .capsule)

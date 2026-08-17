@@ -35,7 +35,13 @@ struct SettingsView: View {
                     privacyGroup
                     supportGroup
                     aboutGroup
-                    footnote
+                    // `spacingL` from the About card like every other sibling
+                    // in this stack. The old footnote took an extra `spacingXS`
+                    // on top of that, which a loose run of grey text needed to
+                    // separate itself from the card above it; a bordered object
+                    // separates itself, and the nudge would now make the notice
+                    // the one sibling sitting at an odd gap.
+                    medicalNotice
                 }
                 .padding(.horizontal, Theme.pageMargin)
                 // `spacingL`, the same value Home and History now put under
@@ -51,9 +57,9 @@ struct SettingsView: View {
         .ocrQAScrollBottom()
         // Gradient band at the top, floating tab bar at the bottom — top edge
         // effect off at rest and back once the page scrolls, bottom one soft.
-        // `Theme.tabBarClearance` still keeps the footnote reachable above the
-        // bar — the effect changes how content looks under the chrome, not
-        // whether it can be reached.
+        // `Theme.tabBarClearance` still keeps the medical notice reachable
+        // above the bar — the effect changes how content looks under the
+        // chrome, not whether it can be reached.
         .ocrScrollEdges()
         .background { OCRAmbientBackground() }
         .sheet(isPresented: $isShowingDisclaimer) {
@@ -106,22 +112,70 @@ struct SettingsView: View {
             OCRCard {
                 VStack(spacing: 13) {
                     ForEach(classifier.manifest.classes) { classInfo in
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            Text(classInfo.displayName)
-                                .font(.system(size: 15.5))
-                                .foregroundStyle(Theme.numeralMuted)
-                            Spacer(minLength: 12)
-                            Text(classInfo.riskLevel.displayLabel)
-                                .font(.system(size: 14))
-                                .foregroundStyle(Theme.textSecondary)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
+                        // Name and tier read across a line while they fit and
+                        // stack when they do not. The tier used to be pinned to
+                        // its intrinsic width, which at accessibility sizes is
+                        // a demand the row cannot meet and cannot refuse.
+                        ViewThatFits(in: .horizontal) {
+                            classRow(
+                                classInfo,
+                                layout: AnyLayout(
+                                    HStackLayout(alignment: .firstTextBaseline, spacing: 12)
+                                ),
+                                isStacked: false
+                            )
+                            classRow(
+                                classInfo,
+                                layout: AnyLayout(
+                                    VStackLayout(alignment: .leading, spacing: 2)
+                                ),
+                                isStacked: true
+                            )
                         }
-                        .accessibilityElement(children: .combine)
                     }
                 }
             }
         }
+    }
+
+    /// One class and its risk tier, in whichever arrangement fits.
+    ///
+    /// `isStacked` is not cosmetic: `ViewThatFits` builds both branches from
+    /// this one body, so anything sized for the across-the-line case silently
+    /// applies to the stacked one too, where it is usually wrong.
+    ///
+    /// - The `Spacer` is what pushes the tier to the trailing edge *across* a
+    ///   line. In the `VStackLayout` branch it becomes a vertical spacer, and
+    ///   since the stack is sized to its ideal height it resolves to its 12pt
+    ///   minimum — so the declared `spacing: 2` was dead and the real gap
+    ///   between a class name and its tier was ~14pt.
+    /// - `lineLimit(1)` is what makes the horizontal branch report an honest
+    ///   single-line width, which is how `ViewThatFits` knows to fall back. The
+    ///   stacked branch is precisely the case where the tier has the card's
+    ///   full width to itself and must be allowed to wrap: at AX5 "Moderate
+    ///   risk" measures wider than an `OCRCard` on a 375pt device, and clipping
+    ///   it to "Moderate ri…" loses an honesty surface (`RiskLevel.displayLabel`
+    ///   is documented in `OCRMetaLine` as never abbreviated). Same treatment
+    ///   `HistoryRow` gives the class name it stacks.
+    private func classRow(
+        _ classInfo: ModelManifest.ClassInfo,
+        layout: AnyLayout,
+        isStacked: Bool
+    ) -> some View {
+        layout {
+            Text(classInfo.displayName)
+                .ocrFont(.listValue)
+                .foregroundStyle(Theme.numeralMuted)
+            if !isStacked {
+                Spacer(minLength: 12)
+            }
+            Text(classInfo.riskLevel.displayLabel)
+                .ocrFont(.body.size(14))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(isStacked ? nil : 1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Privacy
@@ -143,11 +197,11 @@ struct SettingsView: View {
                     OCRRowIcon(systemName: "lock.shield")
                     VStack(alignment: .leading, spacing: 9) {
                         Text("On-device only")
-                            .font(.system(size: 16, weight: .semibold))
+                            .ocrFont(.rowTitle.weight(.semibold))
                             .tracking(-0.2)
                             .foregroundStyle(Theme.textPrimary)
                         Text("All analysis happens on this device. Photos and results never leave your iPhone unless you share them.")
-                            .font(.system(size: 14))
+                            .ocrFont(.body.size(14))
                             .ocrBodyLeading(size: 14)
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -199,18 +253,31 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Footnote
+    // MARK: - Medical notice
 
     /// Honesty rule 4: disclaimer copy is never written here, only sourced.
-    private var footnote: some View {
-        Text(MedicalDisclaimer.short)
-            .font(.ocrFootnote())
-            // The same string Home sets. It used to run at 1.81 here and 1.50
-            // there; both now run at the type table's footnote ratio.
-            .ocrFootnoteLeading(size: 13)
-            .foregroundStyle(Theme.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, Theme.spacingXS)
+    /// `MedicalDisclaimer.short`, the same string Home sets, verbatim.
+    ///
+    /// Full weight, on the screen where a quieter treatment would have been
+    /// easiest to justify — and `OCRMedicalNotice` has no quieter treatment to
+    /// reach for. Settings is where a reader goes *looking* for terms — the
+    /// Support group directly above ends in a "Medical disclaimer" row — so a
+    /// reader who has scrolled this far has already shown they want the notice,
+    /// and meeting them with the faintest ink in the palette was the old
+    /// behaviour's real failure. Drawing the one object also makes this
+    /// identical to what they will have seen on Home rather than a third
+    /// rendering of the same sentence.
+    ///
+    /// No button here, unlike Home's: the row above already opens the full
+    /// sheet, and a second, differently-shaped tap target for it would be one
+    /// affordance too many on a screen made of rows. `OCRMedicalNotice` adds no
+    /// trait of its own, so VoiceOver reads this as the statement it is.
+    ///
+    /// Typography, leading and colour all now live in the component, which is
+    /// the point: this screen can no longer drift from Home the way it did when
+    /// the two set the same string at 1.81 and 1.50 line-height.
+    private var medicalNotice: some View {
+        OCRMedicalNotice(MedicalDisclaimer.short)
     }
 
     private var appVersion: String {
@@ -241,6 +308,9 @@ private enum SettingsMetrics {
     static let iconRowInset: CGFloat = horizontalPadding + iconWidth + iconGap
     /// Rows without an icon inset their divider by the row padding alone.
     static let plainRowInset: CGFloat = horizontalPadding
+    /// Where a value sits when it has dropped below its own label: on the same
+    /// text rail the label starts on, so the pair still reads as one row.
+    static let iconStackInset: CGFloat = iconWidth + iconGap
 }
 
 /// A 54pt list row: optional leading accent icon, title, trailing value.
@@ -254,25 +324,42 @@ private struct SettingsValueRow: View {
     let title: String
     let value: String
 
+    /// A label and its value share a line only while there is a line to share.
+    /// At accessibility sizes "Engine" and "Demo" each need most of the width,
+    /// and side by side neither got it: both broke *mid-word* — "Engin / e",
+    /// "Versi / on" — which is not a wrap, it is a word coming apart.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
-            if let icon {
-                OCRRowIcon(systemName: icon)
+        let isStacked = dynamicTypeSize.isAccessibilitySize
+        let layout = isStacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap))
+
+        layout {
+            HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
+                if let icon {
+                    OCRRowIcon(systemName: icon)
+                }
+                Text(title)
+                    .ocrFont(.rowTitle)
+                    .tracking(-0.2)
+                    .foregroundStyle(Theme.textPrimary)
             }
-            Text(title)
-                .font(.ocrRowTitle())
-                .tracking(-0.2)
-                .foregroundStyle(Theme.textPrimary)
-            Spacer(minLength: Theme.spacingS)
+            if !isStacked {
+                Spacer(minLength: Theme.spacingS)
+            }
             Text(value)
-                .font(.system(size: 16))
+                .ocrFont(.rowTitle.weight(.regular))
                 // "1.0 (1)" and "© 2026 OCRadar" sit one above the other in a
                 // right-aligned column, which is exactly the case the design's
                 // monospaced-digit rule is about.
                 .monospacedDigit()
                 .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(isStacked ? .leading : .trailing)
+                .padding(.leading, isStacked && icon != nil ? SettingsMetrics.iconStackInset : 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, SettingsMetrics.horizontalPadding)
         .frame(minHeight: Theme.rowHeight)
         .accessibilityElement(children: .combine)
@@ -295,7 +382,7 @@ private struct SettingsNavigationRow: View {
         HStack(alignment: .firstTextBaseline, spacing: SettingsMetrics.iconGap) {
             OCRRowIcon(systemName: icon)
             Text(title)
-                .font(.ocrRowTitle())
+                .ocrFont(.rowTitle)
                 .tracking(-0.2)
                 .foregroundStyle(Theme.textPrimary)
             Spacer(minLength: Theme.spacingS)

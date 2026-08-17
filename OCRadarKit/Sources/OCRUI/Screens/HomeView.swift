@@ -21,17 +21,38 @@ struct HomeView: View {
     @State private var isShowingDisclaimer = false
 
     /// Width of the earlier-scans numeral column. Scaled so a two-digit value
-    /// still fits its column at accessibility text sizes.
+    /// still fits its column at accessibility text sizes — but *bounded*: at
+    /// AX5 the `.body` metric takes 52 to about 160, and an unbounded column
+    /// left the title less room than the number beside it, which is what pushed
+    /// the row past the width of the display. Past the cap the numeral shrinks
+    /// inside its column instead (`minimumScaleFactor` below), and above
+    /// `isAccessibilitySize` the column stops sharing a line with the title
+    /// altogether — see `earlierScansRows`.
     @ScaledMetric(relativeTo: .body) private var railNumeralWidth: CGFloat = 52
 
-    /// SF Pro's left side bearing on the hero numeral, as a fraction of its
-    /// point size. A constant rather than a `@ScaledMetric`, because
-    /// `Font.ocrHeroNumeral()` is a fixed 76pt: the bearing is a property of
-    /// the glyphs actually drawn, and those do not grow with Dynamic Type.
-    ///
-    /// `nonisolated` because `OCRUI` compiles with `defaultIsolation(MainActor)`
-    /// and `alignmentGuide`'s closure is `Sendable`.
-    nonisolated private static let heroNumeralBearing: CGFloat = 76 * 0.047
+    /// The most the numeral column may take from the title beside it: 1.5× the
+    /// design's 52, reached at about AX1.
+    private static let railNumeralMaxWidth: CGFloat = 78
+
+    /// `modelStatusText` builds an `AttributedString`, whose runs carry a
+    /// `Font` — and a `Font` cannot read the environment. So that one run
+    /// scales its own point size, on `OCRTextStyle.meta`'s curve.
+    @ScaledMetric(relativeTo: .subheadline)
+    private var metaFontSize: CGFloat = OCRTextStyle.meta.size
+
+    /// Above this, a row lays its numeral out *above* its title rather than
+    /// beside it. A row is three columns of chrome around one line of text, and
+    /// at accessibility sizes the text needs the whole width.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// SF Pro's left side bearing on the hero numeral: 0.047em, which at the
+    /// design's 76pt is 3.6 invisible points. It is a property of the glyphs
+    /// actually drawn, so now that the numeral grows with Dynamic Type the
+    /// compensation has to grow with it — on `OCRTextStyle.heroNumeral`'s own
+    /// `.largeTitle` curve, or the largest object on the screen would walk off
+    /// the page rail as the text size rose.
+    @ScaledMetric(relativeTo: .largeTitle)
+    private var heroNumeralBearing: CGFloat = OCRTextStyle.heroNumeral.size * 0.047
 
     var body: some View {
         ScrollView {
@@ -140,7 +161,7 @@ struct HomeView: View {
         HStack(spacing: 9) {
             logoMark
             Text("OCRadar")
-                .font(.ocrCardTitle())
+                .ocrFont(.cardTitle)
                 .tracking(-0.2)
             Spacer(minLength: Theme.spacingM)
             Button {
@@ -194,14 +215,14 @@ struct HomeView: View {
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Last scan · \(HomeFormat.relative(record.timestamp))")
-                    .font(.system(size: 13.5, weight: .medium))
+                    .ocrFont(.meta.weight(.medium))
                     .foregroundStyle(Theme.onGradient())
                     .padding(.bottom, 12)
                 // Same guard the sheet header carries: the 76pt numeral scales
                 // with Dynamic Type and the hero clips its own bounds, so it
                 // has to shrink rather than run under the panel edge.
                 Text(ConfidencePercent.text(record.probability))
-                    .font(.ocrHeroNumeral())
+                    .ocrFont(.heroNumeral)
                     .tracking(-3.6)
                     .monospacedDigit()
                     .lineLimit(1)
@@ -215,14 +236,19 @@ struct HomeView: View {
                     // five stacked elements off the rail, while the capsule,
                     // the meta line, the class name and the tier all sat on it.
                     // Nothing else compensates for it, so this does.
-                    .alignmentGuide(.leading) { $0[.leading] + Self.heroNumeralBearing }
+                    // Read out of the view before the closure: `alignmentGuide`
+                    // hands its builder out without isolation, and `OCRUI`
+                    // compiles with `defaultIsolation(MainActor)`.
+                    .alignmentGuide(.leading) { [bearing = heroNumeralBearing] in
+                        $0[.leading] + bearing
+                    }
                 Text(record.topClassName)
-                    .font(.ocrScreenTitle())
+                    .ocrFont(.screenTitle)
                     .tracking(-0.7)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 6)
                 Text(tierLine(for: record))
-                    .font(.system(size: 15.5))
+                    .ocrFont(.listValue)
                     .foregroundStyle(Theme.onGradient())
             }
             .multilineTextAlignment(.leading)
@@ -237,10 +263,10 @@ struct HomeView: View {
     private var emptyHeroBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("No scans yet")
-                .font(.ocrScreenTitle())
+                .ocrFont(.screenTitle)
                 .tracking(-0.7)
             Text("Take your first scan to see your results here.")
-                .font(.system(size: 15.5))
+                .ocrFont(.listValue)
                 .foregroundStyle(Theme.onGradient())
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -286,7 +312,7 @@ struct HomeView: View {
             }
             modelStatusCard
                 .padding(.bottom, Theme.spacingL)
-            footnote
+            medicalNotice
         }
         .padding(.horizontal, Theme.pageMargin)
         // The same header-to-content step History and Settings use.
@@ -297,7 +323,7 @@ struct HomeView: View {
     private var earlierScansHeader: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Earlier scans")
-                .font(.ocrSectionHead())
+                .ocrFont(.sectionHead)
                 .tracking(-0.45)
                 .foregroundStyle(Theme.textPrimary)
             Spacer(minLength: Theme.spacingM)
@@ -305,7 +331,7 @@ struct HomeView: View {
                 selectTab(.history)
             } label: {
                 Text("See all")
-                    .font(.system(size: 15))
+                    .ocrFont(.listValue.size(15))
                     .foregroundStyle(Theme.accent)
                     // Enlarged touch target without disturbing the baseline the
                     // header is aligned on: 13 above and below an ~18pt line
@@ -327,52 +353,7 @@ struct HomeView: View {
                 Button {
                     detailRecord = record
                 } label: {
-                    HStack(spacing: Theme.spacingM) {
-                        // The numeral column scales with the text inside it and
-                        // shrinks before it truncates — the same pattern the
-                        // 52pt History avatar uses. A raw 52 turned "91" into
-                        // "9…" from about AX1 upward.
-                        Text("\(ConfidencePercent.value(record.probability))")
-                            .font(.ocrScreenTitle())
-                            .tracking(-1.0)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .foregroundStyle(Theme.numeralMuted)
-                            // Centred, not leading. History centres the same
-                            // datum in a 52pt avatar on the same 52pt column
-                            // against the same title rail, so a left-aligned
-                            // numeral here put the two screens' optical centres
-                            // 9.8pt apart and left 38pt of dead space before
-                            // the title where History has 17.7.
-                            .frame(width: railNumeralWidth, alignment: .center)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(record.topClassName)
-                                .font(.ocrRowTitle())
-                                .tracking(-0.2)
-                                .foregroundStyle(Theme.textPrimary)
-                            // The shared meta run. The date stays the long
-                            // form the design pins for this screen against
-                            // History's short tokens; what is now shared is the
-                            // hierarchy the two tokens are set in.
-                            //
-                            // `isDemo` is passed from the record's own flag, as
-                            // History's row does. Omitting it let the parameter
-                            // default to `false`, so a demo record read "Moderate
-                            // risk · 1d" here and carried the salmon marker in
-                            // History — one honesty surface disagreeing with
-                            // another, and with this row's own VoiceOver label
-                            // below, which has always said ", demo result".
-                            OCRMetaLine(
-                                tier: record.riskLevel.displayLabel,
-                                timestamp: HomeFormat.relative(record.timestamp),
-                                isDemo: record.isDemoResult
-                            )
-                        }
-                        .multilineTextAlignment(.leading)
-                        Spacer(minLength: Theme.spacingS)
-                        OCRChevron()
-                    }
+                    earlierScanRowContent(record)
                     .padding(.vertical, Theme.spacingM)
                     .padding(.horizontal, 18)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -385,6 +366,89 @@ struct HomeView: View {
                 .accessibilityHint("Opens this scan's details.")
             }
         }
+    }
+
+    /// The row's three parts — numeral, title block, chevron — in the
+    /// arrangement the reader's text size can actually hold.
+    ///
+    /// **Beside at reading sizes, above at accessibility sizes.** The design's
+    /// row is a numeral column, a two-line title block and a chevron on one
+    /// line. That line is only wide enough while the type is: at AX2 and up the
+    /// three columns of chrome leave the title less width than one word of it
+    /// needs, and because a row can only report the width its contents demand,
+    /// the shortfall came back out as *the app* being too wide. So above
+    /// `isAccessibilitySize` the numeral and the chevron take a line of their
+    /// own and the text gets the full width of the card. The row grows
+    /// downwards, which a scroll view can absorb; nothing grows sideways, which
+    /// nothing can.
+    @ViewBuilder
+    private func earlierScanRowContent(_ record: ScanRecord) -> some View {
+        let isStacked = dynamicTypeSize.isAccessibilitySize
+        let layout = isStacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.spacingS))
+            : AnyLayout(HStackLayout(spacing: Theme.spacingM))
+
+        layout {
+            HStack(spacing: 0) {
+                railNumeral(record)
+                if isStacked {
+                    Spacer(minLength: Theme.spacingS)
+                    OCRChevron()
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(record.topClassName)
+                    .ocrFont(.rowTitle)
+                    .tracking(-0.2)
+                    .foregroundStyle(Theme.textPrimary)
+                // The shared meta run. The date stays the long
+                // form the design pins for this screen against
+                // History's short tokens; what is now shared is the
+                // hierarchy the two tokens are set in.
+                //
+                // `isDemo` is passed from the record's own flag, as
+                // History's row does. Omitting it let the parameter
+                // default to `false`, so a demo record read "Moderate
+                // risk · 1d" here and carried the salmon marker in
+                // History — one honesty surface disagreeing with
+                // another, and with this row's own VoiceOver label
+                // below, which has always said ", demo result".
+                OCRMetaLine(
+                    tier: record.riskLevel.displayLabel,
+                    timestamp: HomeFormat.relative(record.timestamp),
+                    isDemo: record.isDemoResult
+                )
+            }
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !isStacked {
+                OCRChevron()
+            }
+        }
+    }
+
+    /// The confidence figure in its column. It scales with the text inside it
+    /// and shrinks before it truncates — the same pattern the 52pt History
+    /// avatar uses. A raw 52 turned "91" into "9…" from about AX1 upward; an
+    /// unbounded one turned the row into something wider than the phone.
+    private func railNumeral(_ record: ScanRecord) -> some View {
+        Text("\(ConfidencePercent.value(record.probability))")
+            .ocrFont(.screenTitle)
+            .tracking(-1.0)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .foregroundStyle(Theme.numeralMuted)
+            // Centred, not leading. History centres the same
+            // datum in a 52pt avatar on the same 52pt column
+            // against the same title rail, so a left-aligned
+            // numeral here put the two screens' optical centres
+            // 9.8pt apart and left 38pt of dead space before
+            // the title where History has 17.7.
+            .frame(
+                width: min(railNumeralWidth, Self.railNumeralMaxWidth),
+                alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .center
+            )
     }
 
     private func rowAccessibilityLabel(for record: ScanRecord) -> String {
@@ -403,12 +467,12 @@ struct HomeView: View {
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Confidence over time")
-                .font(.ocrCardTitle())
+                .ocrFont(.cardTitle)
                 .tracking(-0.25)
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, 2)
             Text("All \(records.count) scans")
-                .font(.ocrMeta())
+                .ocrFont(.meta)
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.bottom, 20)
             HomeConfidenceChart(points: chartPoints)
@@ -444,7 +508,7 @@ struct HomeView: View {
             OCRStatusDot(color: classifier.kind == .mock ? Theme.salmon : Theme.mint)
                 .padding(.top, 5)
             modelStatusText
-                .font(.ocrMeta())
+                .ocrFont(.meta)
                 .ocrBodyLeading(size: 13.5)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -482,7 +546,7 @@ struct HomeView: View {
             detail = " On-device Core ML model installed and ready."
         }
         var status = AttributedString(title)
-        status.font = .ocrMeta().weight(.semibold)
+        status.font = .system(size: metaFontSize, weight: .semibold)
         status.foregroundColor = Theme.textPrimary
         var rest = AttributedString(detail)
         rest.foregroundColor = Theme.textSecondary
@@ -490,28 +554,68 @@ struct HomeView: View {
         return Text(status)
     }
 
-    // MARK: - Footnote
+    // MARK: - Medical notice
 
-    private var footnote: some View {
-        Text(footnoteText)
-            .font(.ocrFootnote())
-            .ocrFootnoteLeading(size: 13)
-            .fixedSize(horizontal: false, vertical: true)
-            .environment(\.openURL, OpenURLAction { _ in
+    /// The disclaimer, as the bordered red-framed object rather than the grey
+    /// 13pt run of `textTertiary` that used to close the page.
+    ///
+    /// It was the last thing on the longest scroll in the app, set in the
+    /// faintest ink the palette has, in the same paragraph shape as a caption —
+    /// which is to say it was present and unread. `OCRMedicalNotice` gives it a
+    /// warning glyph, a title that states the claim in four words, and a red
+    /// outline that nothing else in the app has — at the one weight the
+    /// component has, which matters here because Home carries no other warning:
+    /// for a reader who never opens the Result sheet this is the only place the
+    /// app says what it is not.
+    ///
+    /// The copy is `MedicalDisclaimer.short` verbatim — unchanged from the
+    /// footnote this replaces, and never written here (honesty rule 4).
+    ///
+    /// # Both tap targets, not one
+    ///
+    /// The notice itself is now a button, so the whole object opens the full
+    /// notice rather than a short run of link text buried at the end of a
+    /// sentence. The explicit "Read the full notice" link is kept below it
+    /// anyway, with its accent colour, its underline and its `linkURL` intact:
+    /// it is the only *visible* statement that there is more to read, and a
+    /// bordered panel that happens to be tappable does not say that on its own.
+    /// VoiceOver gets the notice as one button — "Not a medical diagnosis,
+    /// <the disclaimer>" — and the link as the link element it already was.
+    private var medicalNotice: some View {
+        VStack(alignment: .leading, spacing: Theme.spacingS) {
+            Button {
                 isShowingDisclaimer = true
-                return .handled
-            })
+            } label: {
+                OCRMedicalNotice(MedicalDisclaimer.short)
+                    // The notice paints its own fill, but the button's hit
+                    // region should be the whole rounded rectangle including
+                    // any slack, matching every other card-shaped button here.
+                    .contentShape(.rect(cornerRadius: Theme.cardCorner))
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the full medical disclaimer.")
+
+            Text(fullNoticeLink)
+                .ocrFont(.footnote)
+                .ocrFootnoteLeading(size: 13)
+                .fixedSize(horizontal: false, vertical: true)
+                .environment(\.openURL, OpenURLAction { _ in
+                    isShowingDisclaimer = true
+                    return .handled
+                })
+        }
     }
 
-    /// `MedicalDisclaimer.short` verbatim, with the full notice one tap away.
-    private var footnoteText: AttributedString {
-        var text = AttributedString(MedicalDisclaimer.short + " ")
-        text.foregroundColor = Theme.textTertiary
+    /// The "Read the full notice" link, styled and routed exactly as it was
+    /// when it trailed the footnote: accent, underlined, carrying
+    /// `MedicalDisclaimerSheet.linkURL`, and intercepted by the local
+    /// `OpenURLAction` above so it never reaches the system.
+    private var fullNoticeLink: AttributedString {
         var link = AttributedString("Read the full notice")
         link.foregroundColor = Theme.accent
         link.underlineStyle = Text.LineStyle.single
         link.link = MedicalDisclaimerSheet.linkURL
-        return text + link
+        return link
     }
 }
 

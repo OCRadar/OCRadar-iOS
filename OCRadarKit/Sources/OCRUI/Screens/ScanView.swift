@@ -277,7 +277,7 @@ struct ScanView: View {
                     // `Text` takes its ideal width, so the glass is only as wide
                     // as the two lines and the framing view stays open.
                     Text("Frame the area that concerns you\nHold steady in good light")
-                        .font(.system(size: 14))
+                        .ocrFont(.body.size(14))
                         .foregroundStyle(Theme.numeralMuted)
                         .multilineTextAlignment(.center)
                         .ocrBodyLeading(size: 14)
@@ -481,7 +481,7 @@ struct ScanView: View {
         HStack(spacing: 8) {
             OCRStatusDot(color: dot, pulsing: true)
             Text(text)
-                .font(.system(size: 12.5, weight: .medium))
+                .ocrFont(.meta.size(12.5).weight(.medium))
                 .foregroundStyle(Theme.numeralMuted)
         }
         .padding(.horizontal, 13)
@@ -558,7 +558,7 @@ struct ScanView: View {
         HStack(spacing: 11) {
             OCRStatusDot(color: Theme.accent, pulsing: true)
             Text("Analyzing on device…")
-                .font(.system(size: 16, weight: .semibold))
+                .ocrFont(.rowTitle.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
         }
         .frame(maxWidth: .infinity, minHeight: actionHeight)
@@ -679,13 +679,13 @@ struct ScanView: View {
                 .padding(.bottom, 22)
 
             Text(title)
-                .font(.ocrSectionHead())
+                .ocrFont(.sectionHead)
                 .tracking(-0.45)
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, Theme.spacingS)
 
             Text(message)
-                .font(.ocrBody())
+                .ocrFont(.body)
                 .foregroundStyle(Theme.textSecondary)
                 .ocrBodyLeading(size: 14.5)
                 .padding(.bottom, 26)

@@ -62,12 +62,12 @@ struct OCRClassBar: View {
                 // that range separates them by size *and* weight *and* colour —
                 // the name reads as the label, the number as the datum.
                 Text(name)
-                    .font(.system(size: 15.5))
+                    .ocrFont(.listValue)
                     .foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: Theme.spacingS)
                 Text(percentText)
-                    .font(.system(size: 14.5, weight: .medium))
+                    .ocrFont(.body.weight(.medium))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
             }

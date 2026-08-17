@@ -93,31 +93,31 @@ struct OCRRowIcon: View {
 /// `HStack(alignment: .firstTextBaseline)` and it stops floating in the middle
 /// of the row box.
 ///
-/// **The point size is a plain constant, and that is deliberate.** SwiftUI's
-/// `Font.system(size:)` is already scaled by Dynamic Type, so feeding it a
-/// `@ScaledMetric` scales the glyph *twice*: at AX3–AX5 the chevron grew past
-/// the cap band of the 16pt title it is specified to match, while every text
-/// label around it grew once. The `rail` below stays scaled because a `frame`
-/// width is not scaled by anything else — which is the same split every other
-/// metric in the package already uses (`avatar`, `railNumeralWidth`,
-/// `actionHeight`, `pillHeight`, the `OCRMetaLine` dots are all containers).
+/// **The point size scales, and it has to.** An earlier note here claimed
+/// `Font.system(size:)` was scaled by Dynamic Type on its own and made the size
+/// a plain constant on that basis. It is not — a system font declared by point
+/// size is fixed (see `OCRTextStyle`) — so the constant meant the chevron alone
+/// stayed 13pt while the title it is specified to match reached 50pt at AX5.
+/// Both the glyph and its `rail` are therefore `@ScaledMetric` on `.body`, the
+/// curve the 16pt row title now grows along, so the two keep their measured
+/// relationship at every text size instead of only the default one.
 ///
 /// Decorative: the row itself carries the button trait and the label.
 struct OCRChevron: View {
     /// The trailing column the glyph is centred in.
     static let railWidth: CGFloat = 10
-    /// The one point size for a disclosure chevron. Scaled by `Font.system`
-    /// itself — see the note above.
+    /// The one point size for a disclosure chevron.
     static let glyphSize: CGFloat = 13
 
     /// Point size of the title this chevron discloses, for cap-band centring.
     var titleSize: CGFloat = 16
 
     @ScaledMetric(relativeTo: .body) private var rail: CGFloat = OCRChevron.railWidth
+    @ScaledMetric(relativeTo: .body) private var glyph: CGFloat = OCRChevron.glyphSize
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: Self.glyphSize, weight: .semibold))
+            .font(.system(size: glyph, weight: .semibold))
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(Theme.chevron)
             .frame(width: rail)
@@ -173,38 +173,95 @@ struct OCRMetaLine: View {
     /// what makes it read as a marker and not as punctuation.
     private let markerGap: CGFloat = 7
 
+    /// A dot run reads across a line, and takes the line it needs — which is
+    /// why this is a `ViewThatFits` and not a text-size threshold. Whether
+    /// "Moderate risk · Demo · yesterday" fits on one line is a question about
+    /// this row's width and this reader's type size together, and `ViewThatFits`
+    /// is the one thing that can ask it that way: it keeps the design's run
+    /// wherever the run fits and drops to a stack exactly where it stops
+    /// fitting, on a long class name at a reading size just as much as at AX3.
+    ///
+    /// It also fixes the failure this line used to cause. A view reports the
+    /// width its contents demand, and this one demanded whatever the run came
+    /// to — so at accessibility sizes the row asked for more width than the
+    /// display had, the root `ZStack` grew to its widest child, and ~40pt was
+    /// clipped off both edges of the whole app. A `ViewThatFits` cannot ask for
+    /// more than it is offered.
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(tier)
-                .font(.ocrMeta().weight(.medium))
-                .foregroundStyle(Theme.textSecondary)
-                // The tier and the demo marker never truncate; the timestamp
-                // does. Same precedence the joined string had, made explicit.
-                .fixedSize(horizontal: true, vertical: false)
+        ViewThatFits(in: .horizontal) {
+            run
+            stacked
+        }
+    }
 
+    /// The design's line: `"Low risk · Demo · 1h"`.
+    private var run: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            tierText
             if isDemo {
-                dot(diameter: markerDot, fill: Theme.salmon)
+                demoMarker
                     .padding(.leading, markerGap)
                     .padding(.trailing, markerGap - 1)
-                Text("Demo")
-                    .font(.ocrMeta())
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: true, vertical: false)
+                demoText
             }
-
             dot(diameter: separatorDot, fill: Theme.textTertiary)
                 .padding(.horizontal, separatorGap)
-
-            Text(timestamp)
-                .font(.ocrMeta())
-                // A value the user compares down a column of rows.
-                .monospacedDigit()
-                .foregroundStyle(Theme.textTertiary)
-                .lineLimit(1)
+            timestampText
         }
-        // One phrase to VoiceOver where a row has not already replaced its
-        // children with a full sentence of its own.
+        // One line or nothing: a run that has started wrapping is no longer the
+        // design's run, and is exactly the case `stacked` is for.
+        .lineLimit(1)
         .accessibilityElement(children: .combine)
+    }
+
+    /// The same three tokens, one per line, for when they cannot share one.
+    ///
+    /// Nothing here is pinned to its intrinsic width. The two
+    /// `fixedSize(horizontal: true, …)` calls this line used to carry — on the
+    /// tier and on "Demo", to give them truncation precedence over the
+    /// timestamp — meant the row could not compress *at all*. Precedence
+    /// between tokens is only meaningful while they share a line, and here they
+    /// do not.
+    private var stacked: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            tierText
+            if isDemo {
+                HStack(alignment: .firstTextBaseline, spacing: markerGap) {
+                    demoMarker
+                    demoText
+                }
+            }
+            timestampText
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tierText: some View {
+        Text(tier)
+            .ocrFont(.meta.weight(.medium))
+            .foregroundStyle(Theme.textSecondary)
+    }
+
+    /// The salmon marker that replaces a separator in front of "Demo" — the
+    /// app's established sign for a stand-in result, so it stays in both
+    /// arrangements.
+    private var demoMarker: some View {
+        dot(diameter: markerDot, fill: Theme.salmon)
+    }
+
+    private var demoText: some View {
+        Text("Demo")
+            .ocrFont(.meta)
+            .foregroundStyle(Theme.textSecondary)
+    }
+
+    private var timestampText: some View {
+        Text(timestamp)
+            .ocrFont(.meta)
+            // A value the user compares down a column of rows.
+            .monospacedDigit()
+            .foregroundStyle(Theme.textTertiary)
+            .lineLimit(1)
     }
 
     private func dot(diameter: CGFloat, fill: Color) -> some View {
@@ -226,7 +283,7 @@ struct OCRMetaLine: View {
                 OCRRowIcon(systemName: "doc.text")
                 VStack(alignment: .leading, spacing: 3) {
                     Text("No visible lesion")
-                        .font(.ocrRowTitle())
+                        .ocrFont(.rowTitle)
                         .tracking(-0.2)
                         .foregroundStyle(Theme.textPrimary)
                     OCRMetaLine(tier: "Low risk", timestamp: "1h", isDemo: isDemo)

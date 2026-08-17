@@ -1,5 +1,112 @@
 import SwiftUI
 
+// MARK: - The type scale
+
+/// One row of `design/README.md`'s type table: the point size the design
+/// specifies, the weight it is set in, and the system text style whose Dynamic
+/// Type curve it grows along.
+///
+/// **Why the app's type is not a set of `Font` constants any more.** SwiftUI's
+/// `Font.system(size:)` is a *fixed* size. Unlike a text style (`.body`,
+/// `.title2`) or `Font.custom(_:size:relativeTo:)` it does not respond to
+/// Dynamic Type at all — and every font in this package was declared that way,
+/// while eight container dimensions scaled with `@ScaledMetric`. At
+/// accessibility sizes the boxes therefore grew and the words inside them did
+/// not: on Home the "Earlier scans" row's intrinsic width outgrew the display,
+/// `RootView`'s root `ZStack` sized itself to that widest child and centred it,
+/// and roughly 40pt was clipped off *both* edges of the entire app — the
+/// floating tab bar included. "91%", the one datum the screen exists to show,
+/// rendered as "1%".
+///
+/// A `Font` value cannot fix that on its own, because a `Font` has no access to
+/// the environment. The size comes from a `@ScaledMetric` instead — which
+/// returns the design's own number unchanged at the default text size and grows
+/// it along the named style's curve above that — and a `ViewModifier` is the
+/// only thing that can hold one. That is the same split `OCRLeading` and
+/// `OCRBaselineRise` below already use.
+///
+/// Tracking stays at the call site — `.ocrFont(.rowTitle).tracking(-0.2)` — as
+/// it has no font-level representation.
+///
+/// `nonisolated` because `OCRUI` compiles with `defaultIsolation(MainActor)`
+/// and these are plain value constants.
+nonisolated struct OCRTextStyle: Equatable {
+    /// The design's point size, rendered exactly at the default text size.
+    var size: CGFloat
+    var weight: Font.Weight
+    /// The Dynamic Type curve this role scales along. Roles are mapped to the
+    /// nearest system style, so a hero numeral grows at a display rate and body
+    /// copy grows at a reading rate rather than all of them growing alike.
+    var relativeTo: Font.TextStyle
+
+    init(_ size: CGFloat, _ weight: Font.Weight = .regular, relativeTo: Font.TextStyle) {
+        self.size = size
+        self.weight = weight
+        self.relativeTo = relativeTo
+    }
+
+    /// Hero confidence numeral — 76/600, `design/README.md`.
+    static let heroNumeral = OCRTextStyle(76, .semibold, relativeTo: .largeTitle)
+    /// Screen title and result class name — 26/600.
+    static let screenTitle = OCRTextStyle(26, .semibold, relativeTo: .title)
+    /// Section head, e.g. "Earlier scans" — 21/600.
+    static let sectionHead = OCRTextStyle(21, .semibold, relativeTo: .title2)
+    /// Card title and wordmark — 16.5/600.
+    static let cardTitle = OCRTextStyle(16.5, .semibold, relativeTo: .headline)
+    /// Row title — 16/500.
+    static let rowTitle = OCRTextStyle(16, .medium, relativeTo: .body)
+    /// List value / class name — 15.5/400.
+    static let listValue = OCRTextStyle(15.5, .regular, relativeTo: .body)
+    /// Body copy — 14.5/400, line-height 1.5.
+    static let body = OCRTextStyle(14.5, .regular, relativeTo: .body)
+    /// Header subtitle and row meta — 13.5.
+    static let meta = OCRTextStyle(13.5, .regular, relativeTo: .subheadline)
+    /// The label above a card group — 13/600.
+    static let sectionLabel = OCRTextStyle(13, .semibold, relativeTo: .footnote)
+    /// Footnotes and legal copy — 13/400, line-height 1.6.
+    static let footnote = OCRTextStyle(13, .regular, relativeTo: .caption)
+
+    /// The same role at another weight — the type table gives row meta as
+    /// `500/400`, so both ends of that are values the design sanctions.
+    func weight(_ weight: Font.Weight) -> OCRTextStyle {
+        var copy = self
+        copy.weight = weight
+        return copy
+    }
+
+    /// The same role and the same scaling curve at a neighbouring point size —
+    /// for the handful of sizes the table gives as a range (15.5–16, 14.5,
+    /// 11.5–12.5) rather than as a single number.
+    func size(_ size: CGFloat) -> OCRTextStyle {
+        var copy = self
+        copy.size = size
+        return copy
+    }
+}
+
+extension View {
+    /// Sets the type role for this view's text, scaled for the reader's
+    /// Dynamic Type setting. Replaces `.font(.ocr…())`.
+    func ocrFont(_ style: OCRTextStyle) -> some View {
+        modifier(OCRScaledFont(style: style))
+    }
+}
+
+/// Backs `View.ocrFont(_:)`.
+private struct OCRScaledFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+
+    init(style: OCRTextStyle) {
+        _size = ScaledMetric(wrappedValue: style.size, relativeTo: style.relativeTo)
+        weight = style.weight
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight))
+    }
+}
+
 /// Leading (line-height) for multi-line copy, expressed as the design's own
 /// ratios instead of a per-call-site `lineSpacing` literal.
 ///

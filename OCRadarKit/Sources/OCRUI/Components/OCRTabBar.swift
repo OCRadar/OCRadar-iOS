@@ -48,18 +48,19 @@ struct OCRTabBar: View {
 
     /// Glyph size.
     ///
-    /// `Font.system(size:)` is **not** Dynamic-Type-inert — SwiftUI scales it
-    /// against the body metric — so the previous `min(@ScaledMetric, 27)` did
-    /// two wrong things at once: it scaled the glyph twice, and the 27 capped
-    /// only the number handed to the font, never the size rendered. At AX5 the
-    /// pair resolved to ~84pt inside 62pt of chrome, which is precisely the
-    /// overflow the cap was written to prevent.
+    /// The design's 23, scaled — and the *scaling* is what is capped rather
+    /// than the number. An earlier note here had this the other way round: it
+    /// claimed `Font.system(size:)` was already scaled by SwiftUI and made the
+    /// size a bare constant on that basis. It is not (see `OCRTextStyle`), so
+    /// the constant meant the clamp below governed nothing and the bar was the
+    /// one piece of chrome that never answered Dynamic Type at all.
     ///
-    /// The size is therefore a constant and the *scaling* is what is capped,
-    /// with `dynamicTypeSize(...)` on the glyph itself. The bar is icons-only
-    /// and every item still carries its spoken label, so nothing here is text a
-    /// low-vision user reads; clamping at `.xLarge` keeps a real response
-    /// (23 → ~25.7pt) while guaranteeing the glyph stays inside the 50pt slot.
+    /// The glyph now grows through `.ocrFont`, and `dynamicTypeSize(...)` —
+    /// written *outside* it, so it reaches the scaled metric inside — is what
+    /// stops it. The bar is icons-only and every item still carries its spoken
+    /// label, so nothing here is text a low-vision user reads; clamping at
+    /// `.xLarge` keeps a real response (23 → ~25.7pt) while guaranteeing the
+    /// glyph stays inside the 50pt slot.
     private static let iconPoint: CGFloat = 23
 
     /// The ceiling on that response. `.xLarge` is the largest step whose body
@@ -316,7 +317,7 @@ struct OCRTabBar: View {
             // hierarchical default, which would put two glyph densities in a
             // row that exists to look like one set.
             .symbolRenderingMode(.monochrome)
-            .font(.system(size: Self.iconPoint, weight: .medium))
+            .ocrFont(.rowTitle.size(Self.iconPoint).weight(.medium))
             .dynamicTypeSize(...Self.iconTypeCeiling)
     }
 

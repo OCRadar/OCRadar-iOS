@@ -127,7 +127,7 @@ struct HistoryView: View {
             }
 
             Text("Deleting a scan removes it permanently.")
-                .font(.ocrFootnote())
+                .ocrFont(.footnote)
                 .ocrFootnoteLeading(size: 13)
                 .foregroundStyle(Theme.textTertiary)
                 .padding(.top, Theme.spacingS)
@@ -173,13 +173,13 @@ struct HistoryView: View {
                         .padding(.bottom, 22)
 
                     Text("No scans yet")
-                        .font(.ocrSectionHead())
+                        .ocrFont(.sectionHead)
                         .tracking(-0.45)
                         .foregroundStyle(Theme.textPrimary)
                         .padding(.bottom, Theme.spacingS)
 
                     Text("Photos you analyze in the Scan tab are saved here, on this device only.")
-                        .font(.ocrBody())
+                        .ocrFont(.body)
                         .ocrBodyLeading(size: 14.5)
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -271,17 +271,47 @@ private struct HistoryRow: View {
     /// The newest record overall wears the button gradient; older ones are flat.
     let isNewest: Bool
 
+    /// The avatar scales with the numeral inside it — but only so far. At AX5
+    /// the `.body` metric takes 52 to about 160, which is wider than the title
+    /// column beside it and enough on its own to push the row past the display.
+    /// Past the cap the numeral shrinks inside the circle instead.
     @ScaledMetric(relativeTo: .body) private var avatar: CGFloat = 52
 
+    /// 1.5× the design's 52, reached at about AX1.
+    private static let avatarMaxDiameter: CGFloat = 78
+
+    /// Above this the avatar takes a line of its own — the same rule Home's
+    /// earlier-scans rows follow, and for the same reason: three columns of
+    /// chrome plus one line of accessibility-size text do not fit across a
+    /// phone, and a row that cannot compress makes its whole container too wide.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var diameter: CGFloat { min(avatar, Self.avatarMaxDiameter) }
+
     var body: some View {
-        HStack(spacing: Theme.spacingM) {
-            avatarView
+        let isStacked = dynamicTypeSize.isAccessibilitySize
+        let layout = isStacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.spacingS))
+            : AnyLayout(HStackLayout(spacing: Theme.spacingM))
+
+        layout {
+            HStack(spacing: 0) {
+                avatarView
+                if isStacked {
+                    Spacer(minLength: Theme.spacingS)
+                    OCRChevron()
+                }
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(record.topClassName)
-                    .font(.ocrRowTitle())
+                    .ocrFont(.rowTitle)
                     .tracking(-0.2)
                     .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
+                    // Two lines is the design's allowance at reading sizes; at
+                    // accessibility sizes a class name needs however many the
+                    // width leaves it, and truncating the *name of the finding*
+                    // is not an option this screen has.
+                    .lineLimit(isStacked ? nil : 2)
                 OCRMetaLine(
                     tier: record.riskLevel.displayLabel,
                     timestamp: RelativeToken.short(for: record.timestamp),
@@ -289,7 +319,9 @@ private struct HistoryRow: View {
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            OCRChevron()
+            if !isStacked {
+                OCRChevron()
+            }
         }
         .padding(.vertical, Theme.spacingM)
         .padding(.horizontal, 18)
@@ -304,7 +336,7 @@ private struct HistoryRow: View {
 
     private var avatarView: some View {
         Text(percentValue.formatted())
-            .font(.system(size: 17, weight: .semibold))
+            .ocrFont(.rowTitle.size(17).weight(.semibold))
             // The confidence numeral is the app's signature, and tracking is
             // half of what makes it one: −3.6 on the hero's 76pt and −1.0 on
             // Home's 26pt rail are both ≈ −0.04em, and this avatar was the one
@@ -323,7 +355,7 @@ private struct HistoryRow: View {
             .minimumScaleFactor(0.6)
             .lineLimit(1)
             .foregroundStyle(isNewest ? Theme.onGradient() : Theme.numeralMuted)
-            .frame(width: avatar, height: avatar)
+            .frame(width: diameter, height: diameter)
             .background {
                 if isNewest {
                     Theme.button.clipShape(.circle)
@@ -389,6 +421,13 @@ enum RelativeToken {
 ///
 /// Deliberately no class breakdown: a stored record keeps only its top class,
 /// and a full score table belongs to a fresh analysis (`ResultView`).
+///
+/// This and `ResultView` are the two screens in the app where a user is looking
+/// at a *result*, so both carry the medical disclaimer as `OCRMedicalNotice`
+/// rather than as the grey 13pt footnote it used to be. A stored scan
+/// is if anything the riskier of the two: it is read cold, weeks later, with
+/// none of the context of having just taken the photo, and it is the record a
+/// person is most likely to show someone else. See `medicalNotice`.
 struct HistoryDetailView: View {
     let record: ScanRecord
 
@@ -417,16 +456,19 @@ struct HistoryDetailView: View {
 
                     detailCard
 
-                    // Below the rows, not above them: the design's order for
-                    // this sheet is notice → rows → footnote, and a full-width
-                    // photo between the notice and the rows pushed every
-                    // measured value off the first screen.
-                    scanImage
+                    // Directly under the measured values, and — unlike the
+                    // Result sheet — *above* the photo rather than at the very
+                    // foot. `scanImage` is the one element on this sheet with
+                    // no height of its own: it is `scaledToFit` at full width,
+                    // so a portrait photo renders taller than 480pt and the
+                    // disclaimer that used to follow it began below the second
+                    // screen, with nothing after it to suggest it was there.
+                    // The photo is the only thing here the user has already
+                    // seen — they took it — so it is the one item that can
+                    // afford to be last.
+                    medicalNotice
 
-                    Text(MedicalDisclaimer.full)
-                        .font(.ocrFootnote())
-                        .ocrFootnoteLeading(size: 13)
-                        .foregroundStyle(Theme.textTertiary)
+                    scanImage
                 }
                 .padding(.horizontal, Theme.pageMargin)
                 // Matches the gap between every pair of siblings below it, so
@@ -439,7 +481,7 @@ struct HistoryDetailView: View {
         .scrollIndicators(.hidden)
         // Sheet, so no tab bar and no status-bar overlap: only the bottom edge
         // is worth softening, and the body's 44pt bottom padding keeps the
-        // disclaimer clear of the dissolve.
+        // last element clear of the dissolve.
         .scrollEdgeEffectStyle(.soft, for: .bottom)
         .background { OCRAmbientBackground() }
     }
@@ -458,6 +500,29 @@ struct HistoryDetailView: View {
             title: "Demo result.",
             message: "This scan was made without a trained model. Its scores are generated placeholders and carry no medical meaning."
         )
+    }
+
+    /// The disclaimer, drawn as the same object it is drawn as on the Result
+    /// sheet: `OCRMedicalNotice`, with `MedicalDisclaimer.full` passed
+    /// verbatim. Identical component, identical weight, identical title — the
+    /// component has only one form precisely so the notice cannot look like a
+    /// different kind of warning depending on which screen a person happens to
+    /// be standing on.
+    ///
+    /// It is deliberately unaffected by `record.riskLevel`. The `.high` tier
+    /// above it in the header is plain ambient text
+    /// (`RiskLevel.displayLabel`); this panel is a bordered, glyph-led
+    /// rectangle drawn the same for a low-risk record as for a high-risk one.
+    /// A reader can therefore never take "not a medical diagnosis" for "this
+    /// scan is bad" — the panel says nothing about the record it sits under,
+    /// and it looks it.
+    ///
+    /// Distinct, too, from `demoNotice` above: that one is amber and warns
+    /// about *placeholder data*, a defect of this particular record. This one
+    /// is red and warns about the app itself, on every record. Two different
+    /// claims, two different treatments, and they stack without merging.
+    private var medicalNotice: some View {
+        OCRMedicalNotice(MedicalDisclaimer.full)
     }
 
     /// Four 54pt rows. `Model` reads the version stored *on the record*, not
@@ -501,7 +566,7 @@ struct HistoryDetailView: View {
     private func detailRow(_ label: String, _ value: String) -> some View {
         HStack(spacing: 0) {
             Text(label)
-                .font(.system(size: 16))
+                .ocrFont(.rowTitle.weight(.regular))
                 .foregroundStyle(Theme.textSecondary)
                 .layoutPriority(0)
             // The value wins the row: the label is short and fixed, so letting
@@ -509,7 +574,7 @@ struct HistoryDetailView: View {
             // two lines. All four rows now measure a flat 54.
             Spacer(minLength: Theme.spacingM)
             Text(value)
-                .font(.system(size: 16))
+                .ocrFont(.rowTitle.weight(.regular))
                 .monospacedDigit()
                 .foregroundStyle(Theme.textPrimary)
                 .multilineTextAlignment(.trailing)

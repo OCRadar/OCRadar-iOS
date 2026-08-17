@@ -37,7 +37,7 @@ struct OCRSectionLabel: View {
 
     var body: some View {
         Text(text)
-            .font(.ocrSectionLabel())
+            .ocrFont(.sectionLabel)
             .foregroundStyle(Theme.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -121,6 +121,12 @@ struct OCRPanelRings: View {
 /// Home and the sheets use the same treatment with a taller body — see
 /// `Theme.hero` and `OCRSheetHeader`.
 struct OCRHeaderBand<Trailing: View>: View {
+    /// Room for the status bar above a bottom-aligned, fixed-height band. A
+    /// constant rather than the real safe-area inset because the band is drawn
+    /// inside a container that has already ignored it, so there is no inset
+    /// left in the environment to read.
+    private static var statusBarClearance: CGFloat { 62 }
+
     let title: String
     let subtitle: String
     /// 150 for Scan; `nil` lets the 96/24 padding size the band.
@@ -158,6 +164,14 @@ struct OCRHeaderBand<Trailing: View>: View {
             // one, so a taller band costs stage height, never legibility.
             titleRow
                 .padding(.horizontal, Theme.pageMargin)
+                // Clears the status bar. The band bleeds through the top safe
+                // area by design and its content is bottom-aligned, so once the
+                // type scales the pair grows *upward* — at AX5 the word "Scan"
+                // was drawn straight across the clock. Below the band's 150 this
+                // costs nothing: 62 + the pair + 22 is under 150 at every
+                // reading size, so the design's measured band is unchanged and
+                // only the sizes that would have collided pay for it.
+                .padding(.top, Self.statusBarClearance)
                 .padding(.bottom, 22)
                 .frame(
                     maxWidth: .infinity,
@@ -177,16 +191,16 @@ struct OCRHeaderBand<Trailing: View>: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.ocrScreenTitle())
+                    .ocrFont(.screenTitle)
                     .tracking(-0.7)
                 Text(subtitle)
-                    .font(.ocrMeta())
+                    .ocrFont(.meta)
                     .foregroundStyle(Theme.onGradient())
             }
             .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: Theme.spacingM)
             trailing
-                .font(.system(size: 13))
+                .ocrFont(.footnote)
                 .foregroundStyle(Theme.onGradient())
         }
     }
@@ -216,12 +230,12 @@ struct OCRSheetHeader: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(eyebrow)
-                    .font(.system(size: 15, weight: .semibold))
+                    .ocrFont(.listValue.size(15).weight(.semibold))
                     .tracking(-0.1)
                 Spacer(minLength: Theme.spacingM)
                 Button(action: onDone) {
                     Text("Done")
-                        .font(.system(size: 15, weight: .semibold))
+                        .ocrFont(.listValue.size(15).weight(.semibold))
                         .padding(.horizontal, Theme.spacingM)
                         .frame(minWidth: Theme.minTarget, minHeight: 34)
                         // Untinted, for the reason spelled out on Home's hero
@@ -264,14 +278,14 @@ struct OCRSheetHeader: View {
             .padding(.bottom, 30)
 
             Text(meta)
-                .font(.system(size: 13.5, weight: .medium))
+                .ocrFont(.meta.weight(.medium))
                 .foregroundStyle(Theme.onGradient())
                 .padding(.bottom, 12)
 
             // The 76pt numeral scales with Dynamic Type; it shrinks rather
             // than clipping when the text size runs away with it.
             Text(percentText)
-                .font(.ocrHeroNumeral())
+                .ocrFont(.heroNumeral)
                 .tracking(-3.6)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -280,13 +294,13 @@ struct OCRSheetHeader: View {
                 .padding(.bottom, Theme.spacingS)
 
             Text(title)
-                .font(.ocrScreenTitle())
+                .ocrFont(.screenTitle)
                 .tracking(-0.7)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 6)
 
             Text(tierText)
-                .font(.system(size: 15.5))
+                .ocrFont(.listValue)
                 .foregroundStyle(Theme.onGradient())
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -329,6 +343,13 @@ struct OCRDemoNotice: View {
 
     let title: String
     let message: String
+
+    /// An `AttributedString` run carries a `Font`, and a `Font` cannot read the
+    /// environment — so the one place in the package that still names a point
+    /// size to a font directly has to scale that number itself, on the same
+    /// `.subheadline` curve `OCRTextStyle.meta` uses.
+    @ScaledMetric(relativeTo: .subheadline)
+    private var metaSize: CGFloat = OCRTextStyle.meta.size
 
     var body: some View {
         HStack(alignment: .top, spacing: 11) {
@@ -375,10 +396,10 @@ struct OCRDemoNotice: View {
     /// exactly as the design draws it — so it is one `Text`, not two.
     private var copy: Text {
         var notice = AttributedString(title)
-        notice.font = .system(size: 13.5, weight: .semibold)
+        notice.font = .system(size: metaSize, weight: .semibold)
         notice.foregroundColor = Theme.textPrimary
         var rest = AttributedString(" " + message)
-        rest.font = .system(size: 13.5)
+        rest.font = .system(size: metaSize)
         rest.foregroundColor = Theme.textSecondary
         notice.append(rest)
         return Text(notice)

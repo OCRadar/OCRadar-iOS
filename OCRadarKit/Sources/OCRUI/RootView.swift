@@ -27,6 +27,18 @@ enum AppTab: String, Hashable {
     case home, scan, history, settings
 }
 
+/// A clip that bounds the horizontal and leaves the vertical alone — see the
+/// note in `RootView.body`. The vertical inset is a number no layout will ever
+/// reach rather than `.infinity`, which `CGRect` cannot carry.
+///
+/// `nonisolated` because `OCRUI` compiles with `defaultIsolation(MainActor)`
+/// and `Shape.path(in:)` is not main-actor isolated.
+nonisolated private struct HorizontalClip: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(rect.insetBy(dx: 0, dy: -100_000))
+    }
+}
+
 extension View {
     /// What every full-screen scrolling tab needs from its scroll container so
     /// it meets the app's chrome correctly at both ends. The two edges are
@@ -179,8 +191,32 @@ public struct RootView: View {
             // at the end of a scroll. It is the same treatment, so those seams
             // are invisible rather than a shade off.
             OCRAmbientBackground()
+            // The screen is pinned to the width of its container and clipped
+            // to it, and that is defence in depth rather than layout.
+            //
+            // A `ZStack` sizes itself to its widest child and centres the
+            // others in it, so a single screen whose contents demanded more
+            // width than the display had did not overflow *itself* — it made
+            // the whole stack wider, and everything else in the stack was then
+            // centred in something bigger than the phone. That is how one long
+            // class name in a Home row at an accessibility text size took
+            // roughly 40pt off both edges of the entire app, including a
+            // floating tab bar that is not even inside the scroll view.
+            //
+            // `containerRelativeFrame` refuses that: whatever a screen asks
+            // for, it is handed exactly the container's width, and anything
+            // that still will not fit is clipped to its own bounds. A screen
+            // can now only ever break itself.
+            //
+            // The clip is horizontal *only*. A plain `.clipped()` also cuts the
+            // vertical, and every screen here deliberately bleeds its gradient
+            // panel out through the top safe area — clipping that put a black
+            // band under the status bar where the hero used to run to the
+            // physical edge.
             selectedScreen
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxHeight: .infinity)
+                .containerRelativeFrame(.horizontal)
+                .clipShape(HorizontalClip())
             OCRTabBar(selection: $selectedTab)
         }
         .tint(Theme.accent)
@@ -224,10 +260,30 @@ public struct RootView: View {
         }
     }
 
+    /// Whether the first-launch gate is up. Read-only by construction: the
+    /// setter ignores what SwiftUI writes through it.
+    ///
+    /// It used to be `set { hasAcknowledgedDisclaimer = !$0 }`, which turned
+    /// *any* dismissal into acknowledgement — SwiftUI writes `false` through an
+    /// `isPresented` binding whenever a sheet goes away, and that inverted
+    /// setter recorded that as consent the user never gave. The gate held only
+    /// because `.interactiveDismissDisabled()` happened to remove the one
+    /// dismissal route that existed, which made a single modifier the entire
+    /// enforcement mechanism for the app's medical acknowledgement: adding a
+    /// `dismiss()` anywhere inside `MedicalDisclaimerSheet` (a Cancel
+    /// affordance, or reusing the re-read sheet's "Done" path) would have
+    /// silently marked the disclaimer as read.
+    ///
+    /// Now the flag moves in exactly one place — `onAction`, wired to "I
+    /// understand" — and dismissal by any other route simply re-presents the
+    /// sheet, because `get` still reports that the gate is up.
+    /// `.interactiveDismissDisabled()` stays, so a swipe does not produce a
+    /// sheet that reappears; it is now belt to this braces rather than the only
+    /// thing holding.
     private var needsAcknowledgement: Binding<Bool> {
         Binding(
             get: { !hasAcknowledgedDisclaimer },
-            set: { hasAcknowledgedDisclaimer = !$0 }
+            set: { _ in }
         )
     }
 }

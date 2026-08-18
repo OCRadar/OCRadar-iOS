@@ -19,10 +19,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0CA000000000000000000004 /* OCRadar */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
 			path = OCRadar;
 			sourceTree = "<group>";
 		};
@@ -277,7 +273,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OCRadar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph areas of concern in the mouth for on-device analysis. Photos never leave your device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph the inside of your mouth, then compares that photo with reference images on your device. Photos never leave your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -312,7 +308,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OCRadar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph areas of concern in the mouth for on-device analysis. Photos never leave your device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "OCRadar uses the camera to photograph the inside of your mouth, then compares that photo with reference images on your device. Photos never leave your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

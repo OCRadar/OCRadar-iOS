@@ -1,10 +1,17 @@
 # OCRadar ML pipeline
 
-PyTorch training and Core ML export for the OCRadar on-device oral-lesion
-classifier. The output of this pipeline — `OralLesionClassifier.mlpackage` and
+PyTorch training and Core ML export for OCRadar's on-device image classifier.
+The output of this pipeline — `OralLesionClassifier.mlpackage` and
 `ModelManifest.json` — is what the app's `CoreMLLesionClassifier.bundled()`
 loads at launch; when neither is bundled, the app falls back to a
 deterministic mock.
+
+What the model does, in the app's own terms: it scores how similar a photo is
+to each of a set of **reference categories**. The app reports that similarity
+and nothing more. It does not screen for, detect, diagnose, or rule out any
+condition, and no output of this pipeline may be presented as if it did — see
+[Ethics and intended use](#ethics-and-intended-use) below, and
+[`../docs/APP_STORE.md`](../docs/APP_STORE.md) if you are shipping.
 
 The manifest schema and the class metadata here mirror
 `OCRadarKit/Sources/OCRCore/ModelManifest.swift`. If you change one side,
@@ -99,29 +106,46 @@ names: `OralLesionClassifier` and `ModelManifest.json`. Rebuild the app and
 
 ## Ethics and intended use
 
-- **Screening aid, never diagnosis.** The model's output is triage guidance
-  that the app presents alongside a medical disclaimer. Nothing in this
-  pipeline or its outputs constitutes medical advice, diagnosis, or
-  treatment, and the model can be wrong in either direction. The app's
-  wording (see `MedicalDisclaimer` in OCRCore) reflects this; keep any new
-  class summaries consistent with it.
+- **Visual similarity, never diagnosis.** The model's output is a similarity
+  score against reference categories, which the app presents as an awareness
+  prompt: something to ask a professional about. Nothing in this pipeline or
+  its outputs constitutes medical advice, diagnosis, or treatment, and the
+  comparison can be wrong in both directions — it can point at something
+  completely harmless, and it can miss something serious. `MedicalDisclaimer`
+  in OCRCore holds the canonical wording; every word this pipeline emits into
+  the manifest has to be consistent with it.
+- **Write class metadata that describes the category, not the person.** A
+  `summary` in your labels YAML says what the reference category looks like
+  and what to do next. It must not say what a finding is, how likely it is to
+  be anything, or what it may become. `riskLevel` is next-step guidance —
+  `low` / `moderate` / `high` render in-app as "Routine" / "Worth asking
+  about" / "See a professional soon" — so choose it by asking how soon
+  someone should raise this with a professional, not how severe it is.
+  `labels.example.yaml` is the template; follow its wording, not just its
+  shape.
 - **Source data responsibly.** Train only on images that were collected with
   informed consent for this use, under an appropriate license or data-use
-  agreement, and with personally identifying information removed. Clinical
+  agreement, and with personally identifying information removed. Reference
   labels should come from qualified professionals, not crowd-sourcing.
 - **Check who the model works for.** Evaluate performance across skin and
-  mucosal tones, age groups, and capture conditions before shipping; a
-  screening model that underperforms for some populations causes real harm.
+  mucosal tones, age groups, and capture conditions before shipping; a model
+  that underperforms for some populations causes real harm, and "it is only
+  an awareness tool" does not make that acceptable.
+- **If you ship a trained model, you own its claims.** The moment real
+  weights are in the bundle, any statement about how well it works — in the
+  app, the README, or an App Store listing — has to be backed by a held-out
+  evaluation you can produce, with the training data described. Keep the run
+  directory, `history.json`, and your dataset provenance notes.
 
 ## Practical tips
 
 - **Class balance.** Weighted cross-entropy (on by default, derived from
   training-set frequencies) softens moderate imbalance, but it cannot
   conjure signal from a class with a handful of images. Aim for real balance
-  when collecting; rare high-risk classes like erythroplakia are exactly the
-  ones you cannot afford to under-train.
+  when collecting; the rare categories that carry the most urgent next step,
+  like erythroplakia, are exactly the ones you cannot afford to under-train.
 - **Model selection is macro recall,** not accuracy, for the same reason: a
-  model must not buy accuracy by ignoring rare, high-risk classes. Watch the
+  model must not buy accuracy by ignoring rare categories. Watch the
   per-class recall lines in the training log, not just the headline number.
 - **Dataset sizes.** Below roughly 300 images per class, expect the
   from-scratch `oralnet` to struggle; a few hundred per class is a workable

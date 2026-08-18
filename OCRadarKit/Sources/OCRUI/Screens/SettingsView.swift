@@ -1,9 +1,18 @@
 import OCRCore
 import SwiftUI
 
-/// Settings tab: model details, the class taxonomy and its risk tiers, the
-/// privacy statement, support contact, app info, and the full medical
-/// disclaimer.
+/// Settings tab: model details, the reference categories and the next step each
+/// one suggests, the privacy statement, support contact, app info, and the full
+/// medical disclaimer.
+///
+/// This is the screen where the app explains itself, so it is the one screen
+/// where description is allowed to be longer than a label — but description is
+/// all it is. The Model group says what the model does (compares, reports
+/// similarity) rather than what it finds; the category group is a list of what
+/// the comparison can point at and what to do about each, not a table of
+/// conditions with severities. The single bordered notice at the foot is the
+/// only warning-shaped object here: everything above it is plain description,
+/// which is what keeps a reader reading it.
 ///
 /// Built by hand rather than with a grouped `List`. This is the screen a
 /// stock `Form` would have been easiest on and would have hurt most: inset
@@ -81,6 +90,14 @@ struct SettingsView: View {
     /// Honesty rule 1: the engine and version rows read from the live
     /// classifier, so this surface can never claim a trained model is
     /// installed while Home, History or a detail sheet says otherwise.
+    ///
+    /// The caption under the card is the one place in the app that states, in
+    /// the app's own voice rather than the disclaimer's, what the model
+    /// actually does. Two rows reading "Engine · Core ML" and a version number
+    /// describe a piece of software without saying what it is for, and a reader
+    /// fills that in themselves — with "detects" — unless the screen says
+    /// otherwise. So the screen says otherwise, once, in plain description
+    /// rather than as another bordered warning.
     private var modelGroup: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
             OCRSectionLabel("Model")
@@ -99,16 +116,34 @@ struct SettingsView: View {
                     )
                 }
             }
+            groupCaption(
+                "The model compares your photo with reference images and reports which categories look similar. It does not identify conditions."
+            )
         }
     }
 
-    // MARK: - Classes & risk tiers
+    // MARK: - Reference categories
 
     /// Driven entirely by `ModelManifest.classes` — the taxonomy is never
     /// hardcoded here (honesty rule 5).
+    ///
+    /// The section label carries the framing so no caption has to. "Classes &
+    /// risk tiers" described the two columns as a taxonomy of conditions and a
+    /// severity for each, which is a claim; the columns are a reference
+    /// category and the next step it suggests, which is what the app can
+    /// support. Naming the columns correctly costs one label and saves a
+    /// paragraph — the restraint the direction asked for.
+    ///
+    /// In a build with no bundled model the manifest behind this card is
+    /// `ModelManifest.mockOralLesions` — the demo taxonomy — and the card looked
+    /// exactly as authoritative as a trained model's would, two cards below an
+    /// Engine row reading "Demo". The caption is only rendered in that state,
+    /// and it is a caption rather than a notice for the reason `groupCaption`
+    /// gives: this is description, and a third bordered warning on a Settings
+    /// screen is how the first two stop being read.
     private var classesGroup: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
-            OCRSectionLabel("Classes & risk tiers")
+            OCRSectionLabel("Reference categories & next steps")
             OCRCard {
                 VStack(spacing: 13) {
                     ForEach(classifier.manifest.classes) { classInfo in
@@ -135,10 +170,42 @@ struct SettingsView: View {
                     }
                 }
             }
+            if classifier.kind == .mock {
+                groupCaption(
+                    "These are the demo stand-in's categories. Installing a trained model replaces them."
+                )
+            }
         }
     }
 
-    /// One class and its risk tier, in whichever arrangement fits.
+    /// Explanatory copy hung under a group's card, on the same rail as the
+    /// `OCRSectionLabel` above it.
+    ///
+    /// Deliberately *not* an `OCRMedicalNotice`: this is description, and
+    /// wrapping description in the red bordered frame would be the third
+    /// warning-shaped object on one screen. The whole force of that component
+    /// comes from being rare, and a screen that shouts everything is read as a
+    /// screen that shouts nothing.
+    ///
+    /// `textSecondary`, not `textTertiary`. Footnote size already places this
+    /// below the card it explains, and the tertiary ink is the treatment this
+    /// package spent a whole pass getting the disclaimer *out* of — "technically
+    /// present, and the single easiest thing on the screen to skip", as
+    /// `OCRMedicalNotice` puts it. A sentence that exists to stop a reader
+    /// assuming the model detects things does not get set in the faintest ink
+    /// the palette has. It is the same ink the privacy card's body uses, which
+    /// is the same kind of copy.
+    private func groupCaption(_ text: String) -> some View {
+        Text(text)
+            .ocrFont(.footnote)
+            .ocrFootnoteLeading(size: OCRTextStyle.footnote.size)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One class and the next step its tier suggests, in whichever arrangement
+    /// fits.
     ///
     /// `isStacked` is not cosmetic: `ViewThatFits` builds both branches from
     /// this one body, so anything sized for the across-the-line case silently
@@ -152,11 +219,15 @@ struct SettingsView: View {
     /// - `lineLimit(1)` is what makes the horizontal branch report an honest
     ///   single-line width, which is how `ViewThatFits` knows to fall back. The
     ///   stacked branch is precisely the case where the tier has the card's
-    ///   full width to itself and must be allowed to wrap: at AX5 "Moderate
-    ///   risk" measures wider than an `OCRCard` on a 375pt device, and clipping
-    ///   it to "Moderate ri…" loses an honesty surface (`RiskLevel.displayLabel`
-    ///   is documented in `OCRMetaLine` as never abbreviated). Same treatment
-    ///   `HistoryRow` gives the class name it stacks.
+    ///   full width to itself and must be allowed to wrap: at AX5 "See a
+    ///   professional soon" measures far wider than an `OCRCard` on a 375pt
+    ///   device, and clipping it to "See a professio…" loses an honesty surface
+    ///   (`RiskLevel.displayLabel` is documented in `OCRMetaLine` as never
+    ///   abbreviated). The guidance labels are longer than the "Low / Moderate
+    ///   / High risk" words they replaced, so this branch now wraps at ordinary
+    ///   text sizes too — that is the intended behaviour, and no `lineLimit`
+    ///   may be added to tidy it away. Same treatment `HistoryRow` gives the
+    ///   class name it stacks.
     private func classRow(
         _ classInfo: ModelManifest.ClassInfo,
         layout: AnyLayout,
@@ -200,7 +271,13 @@ struct SettingsView: View {
                             .ocrFont(.rowTitle.weight(.semibold))
                             .tracking(-0.2)
                             .foregroundStyle(Theme.textPrimary)
-                        Text("All analysis happens on this device. Photos and results never leave your iPhone unless you share them.")
+                        // "All analysis happens…" until this pass. The sentence
+                        // is about where the work runs, not what the work is,
+                        // and "analysis" was the word doing the damage: it is
+                        // the vocabulary of a clinical read. "Processing" says
+                        // the same true thing about the device without lending
+                        // the app an authority it does not have.
+                        Text("All processing happens on this device. Photos and results never leave your iPhone unless you share them.")
                             .ocrFont(.body.size(14))
                             .ocrBodyLeading(size: 14)
                             .foregroundStyle(Theme.textSecondary)

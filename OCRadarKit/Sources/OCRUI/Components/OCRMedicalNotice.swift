@@ -19,15 +19,15 @@ import SwiftUI
 /// that only ever gets turned down, so it does not exist. Callers choose the
 /// *string* (`MedicalDisclaimer.short` or `.full`) and nothing else.
 ///
-/// # Why it is red, and why that does not collide with a risk tier
+/// # Why it is red, and why that does not collide with a tier
 ///
-/// Red in a screening app is a loaded colour: the obvious reading of a red panel
-/// wrapped around a result is "this result is bad". That reading has to be
-/// impossible here, because the notice says the opposite — it says the app is
-/// not competent to tell you whether the result is bad.
+/// Red beside a health-adjacent result is a loaded colour: the obvious reading
+/// of a red panel wrapped around a result is "this result is bad". That reading
+/// has to be impossible here, because the notice says the opposite — it says the
+/// app is not competent to tell you whether the result is bad.
 ///
-/// The separation is by **form**, not by hue. A risk tier is inline text inside
-/// a sentence ("Low risk · 2h ago") in the ambient ink colours — see
+/// The separation is by **form**, not by hue. A tier is inline text inside
+/// a sentence ("Worth asking about · 2h ago") in the ambient ink colours — see
 /// `RiskLevel.displayLabel`, and note that the restyle deliberately left tiers
 /// with no colour of their own. The notice is a bordered rectangle with a
 /// warning glyph and a fixed title, and it is the only object in the app shaped
@@ -151,6 +151,101 @@ struct OCRMedicalNotice: View {
         static let verticalPadding = Theme.spacingM
         static let horizontalPadding: CGFloat = 18
     }
+}
+
+// MARK: - Result-surface lead
+
+/// The disclaimer as the two *result* surfaces carry it: one sentence at the
+/// top of the sheet, in the app's warning form, with the full statement one tap
+/// away.
+///
+/// # Why the result sheets do not render the full notice inline
+///
+/// They used to, and it was too much. A reader who reaches a result has already
+/// passed the blocking first-launch gate carrying all of
+/// `MedicalDisclaimer.full`; the sheet then stacked a lead sentence, a demo
+/// notice, a professional-care callout and all five paragraphs of `.full` again.
+/// `MedicalDisclaimer`'s own design note is the argument against that — "a wall
+/// of warnings trains people to skip all of them" — and the result sheet is
+/// precisely where being skipped costs the most.
+///
+/// So the budget for a results surface is **one object**: this one. It carries
+/// `MedicalDisclaimer.resultLead` verbatim, in the same red frame and the same
+/// warning glyph the notice uses, at the top of the sheet where the number is
+/// read — not at the foot, which is not where anyone decides what a result
+/// means. The complete statement is a tap away in `MedicalDisclaimerSheet`,
+/// which is the same sheet Home and Settings open and the same text the gate
+/// showed. Nothing is lost; what changes is that the sentence at the moment of
+/// consequence is now the *only* thing competing for that moment.
+///
+/// The link is visible and underlined rather than left implicit in a tappable
+/// panel: a bordered rectangle that happens to accept a tap does not tell
+/// anyone there is more to read.
+///
+/// The copy is a `MedicalDisclaimer` constant passed whole. It is not
+/// paraphrased, shortened or line-limited here, and it must not be.
+struct OCRResultDisclaimerLead: View {
+    /// Opens the full notice. Both call sites present `MedicalDisclaimerSheet`.
+    let onReadFull: () -> Void
+
+    /// Tracks the sentence beside it, like every other glyph-and-text pair in
+    /// the package.
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 15
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: iconSize, weight: .semibold))
+                    .foregroundStyle(Theme.medicalNoticeInk)
+                    // Decorative: the sentence beside it says the same thing in
+                    // words, so VoiceOver gains nothing from "warning, triangle".
+                    .accessibilityHidden(true)
+                Text(MedicalDisclaimer.resultLead)
+                    .ocrFont(.body)
+                    .ocrBodyLeading(size: OCRTextStyle.body.size)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityElement(children: .combine)
+
+            Button(action: onReadFull) {
+                Text("Read the full notice")
+                    .ocrFont(.body.size(14))
+                    .underline()
+                    .foregroundStyle(Theme.accent)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // 44pt row rather than a 17pt line with negative padding
+                    // around it: this is the route to the complete statement, so
+                    // it is the one affordance here that must never be fiddly.
+                    .frame(maxWidth: .infinity, minHeight: Theme.minTarget, alignment: .leading)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the full medical disclaimer.")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.medicalNoticeFill, in: .rect(cornerRadius: Theme.rowCorner))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.rowCorner)
+                .strokeBorder(Theme.medicalNoticeBorder, lineWidth: 1.5)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+#Preview("Result disclaimer lead") {
+    VStack(spacing: Theme.spacingL) {
+        OCRResultDisclaimerLead(onReadFull: {})
+    }
+    .padding(Theme.pageMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .background { OCRAmbientBackground() }
+    .preferredColorScheme(.dark)
 }
 
 #Preview("Medical notice") {

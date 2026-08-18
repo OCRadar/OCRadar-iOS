@@ -58,9 +58,17 @@ FROM, OUT OF, OR IN CONNECTION WITH THIS SOFTWARE OR ITS USE.
 
 6. NOT A MEDICAL DEVICE
 
-OCRadar is a screening aid. It is not a medical device, and it does not
-provide medical advice, diagnosis, or treatment. It has not been evaluated
-or cleared by the FDA or any other regulatory body. Nothing in this
-repository may be deployed, distributed, or represented as a diagnostic
-tool. See MedicalDisclaimer in OCRadarKit/Sources/OCRCore for the canonical
-user-facing wording.
+OCRadar is an awareness tool. It is not a medical device, and it does not
+provide medical advice, diagnosis, or treatment. It has not been reviewed,
+evaluated, or cleared by the FDA or any other regulatory body.
+
+It does not screen for, detect, diagnose, assess, or rule out any condition,
+including cancer. It compares an image against reference categories and
+reports which of them look similar. That comparison can be wrong in both
+directions. Only a dentist or physician can examine a lesion.
+
+Nothing in this repository — the app, the ML pipeline, any trained model, or
+any output of either — may be deployed, distributed, described, or otherwise
+represented as a screening or diagnostic tool. See MedicalDisclaimer in
+OCRadarKit/Sources/OCRCore for the canonical user-facing wording, which is
+the only wording the product uses.

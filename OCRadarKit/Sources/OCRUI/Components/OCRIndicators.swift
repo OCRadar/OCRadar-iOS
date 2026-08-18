@@ -39,8 +39,14 @@ struct OCRStatusDot: View {
     }
 }
 
-/// One row of the Result sheet's "All classes" card: class name, percentage,
-/// and a 6pt capsule bar on a `surfaceRaised` track.
+/// One row of the Result sheet's "Similarity ranking" card: reference-category
+/// name, similarity percentage, and a 6pt capsule bar on a `surfaceRaised`
+/// track.
+///
+/// The card was called "All classes" and this doc outlived the rename. It
+/// matters which name is written here: a column of category names each carrying
+/// a percentage is a differential diagnosis unless the card says it is a ranking
+/// of resemblance, and a doc comment is what the next author copies.
 ///
 /// `rank` is the index into the already-sorted scores, so rank 0 takes the
 /// `barTop` gradient and the rest step down the purple ramp.

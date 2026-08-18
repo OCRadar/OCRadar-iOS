@@ -12,21 +12,21 @@ struct ManifestTests {
           "classes": [
             {
               "id": "healthy",
-              "displayName": "No visible lesion",
+              "displayName": "Common tissue appearance",
               "riskLevel": "low",
-              "summary": "No features associated with common oral lesions were detected."
+              "summary": "Reference category for ordinary-looking mouth tissue."
             },
             {
               "id": "leukoplakia",
               "displayName": "Leukoplakia",
               "riskLevel": "moderate",
-              "summary": "A white patch that warrants professional evaluation."
+              "summary": "Reference category for white patches that do not wipe away."
             },
             {
               "id": "erythroplakia",
               "displayName": "Erythroplakia",
               "riskLevel": "high",
-              "summary": "A red patch. Seek prompt professional evaluation."
+              "summary": "Reference category for red or velvety patches."
             }
           ]
         }
@@ -43,21 +43,21 @@ struct ManifestTests {
 
         let healthy = manifest.classes[0]
         #expect(healthy.id == "healthy")
-        #expect(healthy.displayName == "No visible lesion")
+        #expect(healthy.displayName == "Common tissue appearance")
         #expect(healthy.riskLevel == .low)
-        #expect(healthy.summary == "No features associated with common oral lesions were detected.")
+        #expect(healthy.summary == "Reference category for ordinary-looking mouth tissue.")
 
         let leukoplakia = manifest.classes[1]
         #expect(leukoplakia.id == "leukoplakia")
         #expect(leukoplakia.displayName == "Leukoplakia")
         #expect(leukoplakia.riskLevel == .moderate)
-        #expect(leukoplakia.summary == "A white patch that warrants professional evaluation.")
+        #expect(leukoplakia.summary == "Reference category for white patches that do not wipe away.")
 
         let erythroplakia = manifest.classes[2]
         #expect(erythroplakia.id == "erythroplakia")
         #expect(erythroplakia.displayName == "Erythroplakia")
         #expect(erythroplakia.riskLevel == .high)
-        #expect(erythroplakia.summary == "A red patch. Seek prompt professional evaluation.")
+        #expect(erythroplakia.summary == "Reference category for red or velvety patches.")
     }
 
     @Test func encodeDecodeRoundTripPreservesEquality() throws {

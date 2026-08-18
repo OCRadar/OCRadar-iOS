@@ -242,6 +242,22 @@ struct HomeView: View {
                     .alignmentGuide(.leading) { [bearing = heroNumeralBearing] in
                         $0[.leading] + bearing
                     }
+                // The lead-in that turns the largest object on the screen from
+                // an assertion into a comparison.
+                //
+                // Without it the hero reads "32% — Leukoplakia", which is a
+                // named condition with a confidence score attached: a
+                // diagnosis, stated in the app's biggest type, on the first
+                // screen anyone opens. The class name is not a finding, it is
+                // the label of a reference category the photo resembled, and
+                // `ModelManifest.ClassInfo.displayName` says at the source that
+                // it must be presented as "looks most similar to X" and never
+                // as "you have X". Four words is what that costs here.
+                Text("Looks most similar to")
+                    .ocrFont(.meta.weight(.medium))
+                    .foregroundStyle(Theme.onGradient())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 3)
                 Text(record.topClassName)
                     .ocrFont(.screenTitle)
                     .tracking(-0.7)
@@ -265,7 +281,13 @@ struct HomeView: View {
             Text("No scans yet")
                 .ocrFont(.screenTitle)
                 .tracking(-0.7)
-            Text("Take your first scan to see your results here.")
+            // The empty hero is the first thing a new user sees, so it says
+            // what a scan produces rather than promising "your results". A
+            // comparison against reference categories is a smaller claim than
+            // "results", and it is the true one — the bordered notice at the
+            // foot of this page states the position in full, so this line does
+            // not have to repeat it.
+            Text("Take your first photo to see which reference categories look similar.")
                 .ocrFont(.listValue)
                 .foregroundStyle(Theme.onGradient())
                 .fixedSize(horizontal: false, vertical: true)
@@ -273,16 +295,22 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// "Low risk" — plus the demo suffix, and only ever for a demo record.
+    /// "Routine" — the next-step guidance, plus the demo suffix, and only ever
+    /// for a demo record. The tier is what to do, never how bad it is; see
+    /// `RiskLevel.displayLabel`.
     private func tierLine(for record: ScanRecord) -> String {
         record.isDemoResult
             ? "\(record.riskLevel.displayLabel) · demo result"
             : record.riskLevel.displayLabel
     }
 
+    /// VoiceOver gets the same framing the sighted hero now carries: the
+    /// spoken label leads with "looks most similar to" rather than naming the
+    /// category flat, so the two readings of this block make the same claim.
     private func latestAccessibilityLabel(for record: ScanRecord) -> String {
-        var label = "Most recent scan: \(record.topClassName.lowercased()), "
-        label += "\(ConfidencePercent.value(record.probability)) percent confidence, "
+        var label = "Most recent scan: looks most similar to "
+        label += "\(record.topClassName.lowercased()), "
+        label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
         label += "\(record.riskLevel.displayLabel.lowercased()), "
         label += HomeFormat.relative(record.timestamp)
         if record.isDemoResult {
@@ -320,12 +348,28 @@ struct HomeView: View {
         .padding(.bottom, Theme.tabBarClearance)
     }
 
+    /// "Earlier scans", plus the one line that says what the two columns under
+    /// it are.
+    ///
+    /// Without it the rows are a category name beside a numeral — the
+    /// arrangement `ResultView` singles out as reading like diagnostic
+    /// certainty — and Home had nothing anywhere to qualify them: the hero's
+    /// "Looks most similar to" belongs to a different record, and the section
+    /// head named the rows without naming either column. History states the same
+    /// thing in its band. One line for a whole section is the cheap version of
+    /// that frame; prefixing every row would cost the category name its width.
     private var earlierScansHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Earlier scans")
-                .ocrFont(.sectionHead)
-                .tracking(-0.45)
-                .foregroundStyle(Theme.textPrimary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Earlier scans")
+                    .ocrFont(.sectionHead)
+                    .tracking(-0.45)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Closest reference category and how similar it looked")
+                    .ocrFont(.meta)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer(minLength: Theme.spacingM)
             Button {
                 selectTab(.history)
@@ -427,12 +471,20 @@ struct HomeView: View {
         }
     }
 
-    /// The confidence figure in its column. It scales with the text inside it
-    /// and shrinks before it truncates — the same pattern the 52pt History
-    /// avatar uses. A raw 52 turned "91" into "9…" from about AX1 upward; an
-    /// unbounded one turned the row into something wider than the phone.
+    /// The similarity figure in its column, **with its percent sign**. It
+    /// scales with the text inside it and shrinks before it truncates — the
+    /// same pattern the 52pt History avatar uses. A raw 52 turned "91" into
+    /// "9…" from about AX1 upward; an unbounded one turned the row into
+    /// something wider than the phone.
+    ///
+    /// The sign is not decoration. A bare "64" beside "Leukoplakia" is a number
+    /// with no stated unit next to a category name, and a reader supplies the
+    /// missing unit themselves — certainty. With the sign it is a proportion,
+    /// and the line under the section head says a proportion of what.
+    /// `ConfidencePercent.text` is the formatter the hero and both sheets use,
+    /// so this row can never read a point apart from the sheet it opens.
     private func railNumeral(_ record: ScanRecord) -> some View {
-        Text("\(ConfidencePercent.value(record.probability))")
+        Text(ConfidencePercent.text(record.probability))
             .ocrFont(.screenTitle)
             .tracking(-1.0)
             .monospacedDigit()
@@ -453,8 +505,8 @@ struct HomeView: View {
 
     private func rowAccessibilityLabel(for record: ScanRecord) -> String {
         var label = "Scan from \(HomeFormat.relative(record.timestamp)): "
-        label += "\(record.topClassName.lowercased()), "
-        label += "\(ConfidencePercent.value(record.probability)) percent confidence, "
+        label += "looks most similar to \(record.topClassName.lowercased()), "
+        label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
         label += record.riskLevel.displayLabel.lowercased()
         if record.isDemoResult {
             label += ", demo result"
@@ -462,18 +514,36 @@ struct HomeView: View {
         return label
     }
 
-    // MARK: - Confidence trend
+    // MARK: - Similarity trend
 
+    /// The trend card, retitled.
+    ///
+    /// It read "Confidence over time" over "All 3 scans". Both halves were a
+    /// problem. "Confidence" is certainty in a conclusion, and this number is
+    /// not that — it is how alike two images looked, which every other surface
+    /// now calls *visual similarity* (`HistoryDetailView`'s detail row, the
+    /// result header, the History row's spoken label). Leaving Home on the old
+    /// word made the one screen a reviewer opens first the one screen still
+    /// speaking the language of a verdict.
+    ///
+    /// And a rising line under the word "confidence" invites the reading this
+    /// app must never support: that the chart is tracking a condition getting
+    /// worse. The subtitle now says what is actually plotted — the closest
+    /// match's similarity, per photo — which makes the line a record of
+    /// photographs compared, not a health trajectory. It also absorbs the scan
+    /// count rather than adding a line, because the fix for an ambiguous chart
+    /// is a truer label, not another warning.
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Confidence over time")
+            Text("Similarity over time")
                 .ocrFont(.cardTitle)
                 .tracking(-0.25)
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, 2)
-            Text("All \(records.count) scans")
+            Text(chartSubtitle)
                 .ocrFont(.meta)
                 .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 20)
             HomeConfidenceChart(points: chartPoints)
         }
@@ -486,6 +556,22 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.panelCorner))
         .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.panelCorner))
+    }
+
+    /// What the line actually plots — and, when every plotted record came from
+    /// the demo stand-in, that it plots placeholders.
+    ///
+    /// A chart is the most authoritative-looking object on this screen: it is
+    /// the one thing here that says "data" before a single word is read. In a
+    /// build with no bundled model every point on it is derived from a photo's
+    /// dimensions, so the shape of the line is an artifact of the seed rather
+    /// than anything about a mouth — and a flat line of identical points is
+    /// exactly what a stable finding would look like. The qualifier is a
+    /// suffix on the label rather than another banner: the fix for a chart that
+    /// implies too much is a truer caption, not a warning stacked beside it.
+    private var chartSubtitle: String {
+        let base = "Closest-match similarity across all \(records.count) scans"
+        return records.allSatisfy(\.isDemoResult) ? base + " · demo placeholders" : base
     }
 
     /// Oldest first, so the line reads left to right.
@@ -540,7 +626,12 @@ struct HomeView: View {
         let detail: String
         if classifier.kind == .mock {
             title = "Demo mode — no trained model installed."
-            detail = " Results come from a deterministic stand-in so you can explore the app; they carry no medical meaning."
+            // Names the mechanism, not just the status. A stand-in that says
+            // only "carries no medical meaning" still produces a number, and a
+            // number a reader sees twice looks confirmed; saying the score comes
+            // from the photo's dimensions is what makes the repetition legible
+            // as noise. See `MockLesionClassifier`.
+            detail = " Scores come from each photo's dimensions rather than from what is in it, so every photo of the same size returns the same numbers. They carry no medical meaning."
         } else {
             title = "Model \(classifier.manifest.modelVersion)"
             detail = " On-device Core ML model installed and ready."
@@ -571,29 +662,22 @@ struct HomeView: View {
     /// The copy is `MedicalDisclaimer.short` verbatim — unchanged from the
     /// footnote this replaces, and never written here (honesty rule 4).
     ///
-    /// # Both tap targets, not one
+    /// # One route to the full notice, not two
     ///
-    /// The notice itself is now a button, so the whole object opens the full
-    /// notice rather than a short run of link text buried at the end of a
-    /// sentence. The explicit "Read the full notice" link is kept below it
-    /// anyway, with its accent colour, its underline and its `linkURL` intact:
-    /// it is the only *visible* statement that there is more to read, and a
-    /// bordered panel that happens to be tappable does not say that on its own.
-    /// VoiceOver gets the notice as one button — "Not a medical diagnosis,
-    /// <the disclaimer>" — and the link as the link element it already was.
+    /// The panel was also a button for a while, on top of the "Read the full
+    /// notice" link below it: two affordances for one destination, stacked, with
+    /// only one of them visible as an affordance. That is the same instinct this
+    /// pass is undoing everywhere else — adding a second copy of a thing does not
+    /// make it more likely to be used, it makes the screen harder to read. The
+    /// link stays, because it is the one that *says* there is more to read; the
+    /// panel goes back to being a statement, which is what a notice is.
+    ///
+    /// VoiceOver gets the notice as one combined statement — "Not a medical
+    /// diagnosis, <the disclaimer>" — and the link as the link element it
+    /// already was.
     private var medicalNotice: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
-            Button {
-                isShowingDisclaimer = true
-            } label: {
-                OCRMedicalNotice(MedicalDisclaimer.short)
-                    // The notice paints its own fill, but the button's hit
-                    // region should be the whole rounded rectangle including
-                    // any slack, matching every other card-shaped button here.
-                    .contentShape(.rect(cornerRadius: Theme.cardCorner))
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the full medical disclaimer.")
+            OCRMedicalNotice(MedicalDisclaimer.short)
 
             Text(fullNoticeLink)
                 .ocrFont(.footnote)
@@ -814,7 +898,7 @@ private struct HomeConfidenceChart: View {
         let values = points
             .map { "\($0.percent) percent \($0.longLabel)" }
             .joined(separator: ", ")
-        return "Top-class confidence: \(values)."
+        return "Closest-match visual similarity: \(values)."
     }
 }
 
@@ -850,7 +934,7 @@ private enum HomePreviewData {
             configurations: configuration
         ) else { return nil }
         let seeds: [(String, String, RiskLevel, Double, TimeInterval)] = [
-            ("healthy", "No visible lesion", .low, 0.91, -3_600),
+            ("healthy", "Common tissue appearance", .low, 0.91, -3_600),
             ("leukoplakia", "Leukoplakia", .moderate, 0.64, -90_000),
             ("erythroplakia", "Erythroplakia", .high, 0.55, -400_000),
         ]

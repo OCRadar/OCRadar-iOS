@@ -207,8 +207,15 @@ struct OCRHeaderBand<Trailing: View>: View {
 }
 
 /// The gradient header shared by the Result and Scan-detail sheets: an eyebrow
-/// and a Done button, then the record's meta line, confidence numeral, class
-/// name and risk tier.
+/// and a Done button, then the record's meta line, the similarity numeral, the
+/// words that label it, and the closest-match and next-step lines.
+///
+/// The slots were once described here as "class name, confidence, risk tier",
+/// and both callers deliberately stopped mapping them that way — a category
+/// name in the largest type over a percentage over a severity is the shape of a
+/// diagnosis. The names of the retired concepts are kept out of this doc for the
+/// same reason `RiskLevel.displayLabel` keeps "risk" out of a tier: a comment is
+/// what the next author copies.
 ///
 /// Every value is passed in by the presenting screen so the header can only
 /// ever show the record it was given (honesty rule 6).
@@ -218,6 +225,7 @@ struct OCRHeaderBand<Trailing: View>: View {
 /// Done capsule floating on top of it is glass.
 struct OCRSheetHeader: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let eyebrow: String
     let meta: String
@@ -228,54 +236,43 @@ struct OCRSheetHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            // The eyebrow and Done share a row at reading sizes and split into
+            // two rows at accessibility sizes.
+            //
+            // # Why this is a claim problem, not a layout nicety
+            //
+            // The eyebrow is "Visual comparison" — the first words on the sheet,
+            // and the ones that frame everything under them as a comparison
+            // rather than a finding. Sharing a row with a fixed-width Done
+            // capsule, it was squeezed into whatever width the button left over,
+            // and at AX5 that width was narrower than the word: the header
+            // rendered **"Visual compariso / n"**, breaking mid-word across two
+            // lines. The one phrase that has to survive intact is the phrase
+            // that broke, and it broke only for the readers using the largest
+            // text — who are the least well served by a header that reads as
+            // garbled.
+            //
+            // At accessibility sizes Done therefore takes its own row, aligned
+            // trailing where it already sat, and the eyebrow gets the full
+            // column beneath it. Nothing moves at reading sizes: the `if` only
+            // fires for `isAccessibilitySize`, so the measured 22pt top inset
+            // and the design's single-row header are untouched for everyone
+            // else. The Done button is the only way out of this sheet besides a
+            // swipe, so it stays first in both layouts — reachable at the top,
+            // never pushed below a wrapping phrase.
+            if dynamicTypeSize.isAccessibilitySize {
+                doneButton
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.bottom, Theme.spacingS)
                 Text(eyebrow)
                     .ocrFont(.listValue.size(15).weight(.semibold))
                     .tracking(-0.1)
-                Spacer(minLength: Theme.spacingM)
-                Button(action: onDone) {
-                    Text("Done")
-                        .ocrFont(.listValue.size(15).weight(.semibold))
-                        .padding(.horizontal, Theme.spacingM)
-                        .frame(minWidth: Theme.minTarget, minHeight: 34)
-                        // Untinted, for the reason spelled out on Home's hero
-                        // gear button: over the header's `#724398` a `white 20%`
-                        // tint lifted the capsule to `#AF7BC8` and dropped the
-                        // white label to **3.24:1**, below the 4.5 floor and
-                        // below the 4.40:1 the flat fill measured. Untinted it
-                        // sits at `#9457B6` for **4.89:1** — better than the
-                        // treatment it replaces — and the specular rim is what
-                        // makes it read as a button.
-                        //
-                        // The Reduce Transparency fallback is *not* that flat
-                        // `white 20%`. This is the only way out of the sheet
-                        // other than a swipe, its 15/600 label is body text,
-                        // and the wash measures 4.40:1 on the header's mid
-                        // tones and 4.15:1 on the `#7C479B` the capsule
-                        // actually sits on — under the floor, and unlike the
-                        // Scan surfaces this backdrop is `Theme.hero` every
-                        // time, so it fails deterministically rather than only
-                        // over a bright photo. `gradientControlFill` is the
-                        // gradient's own deepest stop, opaque, and holds the
-                        // white label at 10.1:1 wherever the capsule lands.
-                        .ocrGlass(
-                            .capsule,
-                            interactive: true,
-                            fallback: Theme.gradientControlFill,
-                            reduceTransparency: reduceTransparency
-                        )
-                        // 34pt capsule, 44pt touch target — this is the only
-                        // way out of the sheet other than a swipe. The outer
-                        // negative padding keeps the capsule on the measured
-                        // 22pt top inset, matching the gear button on Home.
-                        .frame(minHeight: Theme.minTarget)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.vertical, -(Theme.minTarget - 34) / 2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 30)
+            } else {
+                eyebrowRow
             }
-            .padding(.bottom, 30)
 
             Text(meta)
                 .ocrFont(.meta.weight(.medium))
@@ -323,6 +320,66 @@ struct OCRSheetHeader: View {
         .ocrPanelSpill()
         .foregroundStyle(.white)
     }
+
+    /// The design's single row: eyebrow leading, Done trailing.
+    private var eyebrowRow: some View {
+        HStack {
+            Text(eyebrow)
+                .ocrFont(.listValue.size(15).weight(.semibold))
+                .tracking(-0.1)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: Theme.spacingM)
+            doneButton
+        }
+        .padding(.bottom, 30)
+    }
+
+    /// Unchanged from the single-row header — same capsule, same contrast
+    /// argument, same 44pt target. It is a property now only so both layouts
+    /// can place the identical button rather than keeping two copies of it.
+    private var doneButton: some View {
+                Button(action: onDone) {
+                    Text("Done")
+                        .ocrFont(.listValue.size(15).weight(.semibold))
+                        .padding(.horizontal, Theme.spacingM)
+                        .frame(minWidth: Theme.minTarget, minHeight: 34)
+                        // Untinted, for the reason spelled out on Home's hero
+                        // gear button: over the header's `#724398` a `white 20%`
+                        // tint lifted the capsule to `#AF7BC8` and dropped the
+                        // white label to **3.24:1**, below the 4.5 floor and
+                        // below the 4.40:1 the flat fill measured. Untinted it
+                        // sits at `#9457B6` for **4.89:1** — better than the
+                        // treatment it replaces — and the specular rim is what
+                        // makes it read as a button.
+                        //
+                        // The Reduce Transparency fallback is *not* that flat
+                        // `white 20%`. This is the only way out of the sheet
+                        // other than a swipe, its 15/600 label is body text,
+                        // and the wash measures 4.40:1 on the header's mid
+                        // tones and 4.15:1 on the `#7C479B` the capsule
+                        // actually sits on — under the floor, and unlike the
+                        // Scan surfaces this backdrop is `Theme.hero` every
+                        // time, so it fails deterministically rather than only
+                        // over a bright photo. `gradientControlFill` is the
+                        // gradient's own deepest stop, opaque, and holds the
+                        // white label at 10.1:1 wherever the capsule lands.
+                        .ocrGlass(
+                            .capsule,
+                            interactive: true,
+                            fallback: Theme.gradientControlFill,
+                            reduceTransparency: reduceTransparency
+                        )
+                        // 34pt capsule, 44pt touch target — this is the only
+                        // way out of the sheet other than a swipe. The outer
+                        // negative padding keeps the capsule on the measured
+                        // 22pt top inset, matching the gear button on Home.
+                        .frame(minHeight: Theme.minTarget)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.vertical, -(Theme.minTarget - 34) / 2)
+    }
 }
 
 /// Outlined notice marking a demo result. The salmon dot is data-only styling —
@@ -330,6 +387,20 @@ struct OCRSheetHeader: View {
 ///
 /// `title` and `message` are always supplied in full by the caller; the two
 /// sheets word this differently and neither wording may be shortened.
+///
+/// # Why it is set at body size and not at meta size
+///
+/// It used to be the smallest type on the sheet it appears on, in the greyest
+/// ink, directly under the largest number in the app. That inverted the
+/// emphasis for the only build that actually ships: "this app is not a
+/// diagnosis" is true of every build and is stated in the red panel above,
+/// while "the number you are looking at came from your photo's pixel
+/// dimensions" is the specific, checkable, currently load-bearing fact — and it
+/// was the quietest thing on the page. It now sets its copy at
+/// `OCRTextStyle.body` with the message in `Theme.textPrimary`, the same ink and
+/// size the disclaimer lead beside it uses. The grey outline still separates it
+/// from the red frame by form, so the two remain different objects making
+/// different claims.
 struct OCRDemoNotice: View {
     /// `Theme.noticeBorder` with `Theme.surfaceEdge` composited over it:
     /// `#302B3B` + white 7% = `#3E3A49`, L\* 25.4 against the border's 18.7.
@@ -347,9 +418,9 @@ struct OCRDemoNotice: View {
     /// An `AttributedString` run carries a `Font`, and a `Font` cannot read the
     /// environment — so the one place in the package that still names a point
     /// size to a font directly has to scale that number itself, on the same
-    /// `.subheadline` curve `OCRTextStyle.meta` uses.
-    @ScaledMetric(relativeTo: .subheadline)
-    private var metaSize: CGFloat = OCRTextStyle.meta.size
+    /// `.body` curve `OCRTextStyle.body` uses.
+    @ScaledMetric(relativeTo: .body)
+    private var copySize: CGFloat = OCRTextStyle.body.size
 
     var body: some View {
         HStack(alignment: .top, spacing: 11) {
@@ -361,8 +432,8 @@ struct OCRDemoNotice: View {
             copy
         }
         // The design's body line-height, named as the ratio it is rather than
-        // as the 4pt literal that happens to produce it at 13.5.
-        .ocrBodyLeading(size: 13.5)
+        // as the literal that happens to produce it at one size.
+        .ocrBodyLeading(size: OCRTextStyle.body.size)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, Theme.spacingM)
@@ -396,11 +467,13 @@ struct OCRDemoNotice: View {
     /// exactly as the design draws it — so it is one `Text`, not two.
     private var copy: Text {
         var notice = AttributedString(title)
-        notice.font = .system(size: metaSize, weight: .semibold)
+        notice.font = .system(size: copySize, weight: .semibold)
         notice.foregroundColor = Theme.textPrimary
         var rest = AttributedString(" " + message)
-        rest.font = .system(size: metaSize)
-        rest.foregroundColor = Theme.textSecondary
+        rest.font = .system(size: copySize)
+        // `textPrimary`, not `textSecondary`: this run states the fact that
+        // makes the number on the sheet meaningless, which is not a caption.
+        rest.foregroundColor = Theme.textPrimary
         notice.append(rest)
         return Text(notice)
     }

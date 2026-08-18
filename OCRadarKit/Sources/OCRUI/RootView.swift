@@ -231,12 +231,19 @@ public struct RootView: View {
         .environment(\.selectTab, TabSelector { tab in selectedTab = tab })
         .preferredColorScheme(.dark)
         .sheet(isPresented: needsAcknowledgement) {
-            // The first-launch gate: "I understand" is what sets
+            // The first-launch gate: the acknowledgement button is what sets
             // `hasAcknowledgedDisclaimer`, and the sheet cannot be dismissed
             // any other way.
+            //
+            // The label names the specific thing being acknowledged rather than
+            // agreeing with an unnamed wall of text. "OK" or a bare "Continue"
+            // records that a sheet was closed; "I understand this is not a
+            // diagnosis" records that the reader took away the one claim the
+            // app most needs them to have. It is the app's only proof of
+            // informed acknowledgement, so it says what was understood.
             MedicalDisclaimerSheet(
                 title: "Before you begin",
-                actionTitle: "I understand",
+                actionTitle: "I understand this is not a diagnosis",
                 onAction: { hasAcknowledgedDisclaimer = true }
             )
             // Re-stated for the sheet's own environment. The gate is presented
@@ -274,9 +281,9 @@ public struct RootView: View {
     /// affordance, or reusing the re-read sheet's "Done" path) would have
     /// silently marked the disclaimer as read.
     ///
-    /// Now the flag moves in exactly one place — `onAction`, wired to "I
-    /// understand" — and dismissal by any other route simply re-presents the
-    /// sheet, because `get` still reports that the gate is up.
+    /// Now the flag moves in exactly one place — `onAction`, wired to the
+    /// acknowledgement button — and dismissal by any other route simply
+    /// re-presents the sheet, because `get` still reports that the gate is up.
     /// `.interactiveDismissDisabled()` stays, so a swipe does not produce a
     /// sheet that reappears; it is now belt to this braces rather than the only
     /// thing holding.
@@ -345,7 +352,7 @@ private struct QAAutomationHooks: ViewModifier {
               existing == 0 else { return }
         let thumbnail = ImageResizing.jpegThumbnail(from: image)
         let seeds: [(String, String, RiskLevel, Double, Date)] = [
-            ("healthy", "No visible lesion", .low, 0.91, .now.addingTimeInterval(-3_600)),
+            ("healthy", "Common tissue appearance", .low, 0.91, .now.addingTimeInterval(-3_600)),
             ("leukoplakia", "Leukoplakia", .moderate, 0.64, .now.addingTimeInterval(-90_000)),
             ("erythroplakia", "Erythroplakia", .high, 0.55, .now.addingTimeInterval(-400_000)),
         ]
@@ -380,7 +387,7 @@ private struct QAAutomationHooks: ViewModifier {
         .sheet(isPresented: .constant(true)) {
             MedicalDisclaimerSheet(
                 title: "Before you begin",
-                actionTitle: "I understand",
+                actionTitle: "I understand this is not a diagnosis",
                 onAction: {}
             )
             .medicalDisclaimerPresentation()

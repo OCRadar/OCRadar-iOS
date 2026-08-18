@@ -3,8 +3,16 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// History tab (design §3): every saved scan grouped by real month, newest
-/// first, with a detail sheet per record and swipe-to-delete.
+/// History tab (design §3): every saved comparison grouped by real month,
+/// newest first, with a detail sheet per record and swipe-to-delete.
+///
+/// The list is the one results surface that deliberately carries **no** notice
+/// of its own. A row is a compact reference back to a comparison, not the
+/// comparison itself; the frame is set once, in the band's subtitle, and the
+/// full statement lives on the detail sheet a row opens. A red panel wedged
+/// between every pair of rows would be the definition of overdoing it, and the
+/// reader who has learned to scroll past it is the reader who will also scroll
+/// past it on the sheet where it matters.
 struct HistoryView: View {
     @Query(sort: \ScanRecord.timestamp, order: .reverse) private var records: [ScanRecord]
     @Environment(\.modelContext) private var modelContext
@@ -33,8 +41,23 @@ struct HistoryView: View {
 
     // MARK: - Header
 
+    /// The subtitle carries three facts, and all three are load-bearing: what
+    /// these rows are (*comparisons*, not findings), what the numeral in each
+    /// row's avatar means (how similar the photo looked, not how certain
+    /// anything is), and where they live (this device, nowhere else). It is the
+    /// whole of the framing this screen needs, which is why nothing below
+    /// repeats it.
+    ///
+    /// "Past comparisons, saved on this device only" until this pass. It named
+    /// the rows but not the number, and a bare numeral beside a category name is
+    /// the one arrangement `ResultView` singles out as reading like diagnostic
+    /// certainty. Naming it in the band costs a few words once, where prefixing
+    /// every row would cost the category name its width — see `HistoryRow`.
     private var header: some View {
-        OCRHeaderBand(title: "History", subtitle: "Saved on this device only") {
+        OCRHeaderBand(
+            title: "History",
+            subtitle: "Past comparisons — closest reference category and how similar it looked. Saved on this device only."
+        ) {
             Text(countLabel)
         }
     }
@@ -178,7 +201,7 @@ struct HistoryView: View {
                         .foregroundStyle(Theme.textPrimary)
                         .padding(.bottom, Theme.spacingS)
 
-                    Text("Photos you analyze in the Scan tab are saved here, on this device only.")
+                    Text("Photos you compare in the Scan tab are saved here, on this device only.")
                         .ocrFont(.body)
                         .ocrBodyLeading(size: 14.5)
                         .foregroundStyle(Theme.textSecondary)
@@ -257,8 +280,19 @@ struct HistoryView: View {
 
 // MARK: - Row
 
-/// One saved scan: a 52pt confidence avatar, the class name, and the shared
-/// `"<Tier> risk · Demo · 1h"` meta line.
+/// One saved comparison: a 52pt similarity avatar, the closest reference
+/// category, and the shared `"<Tier> · Demo · 1h"` meta line.
+///
+/// The row states the category name plainly and does not repeat the sheet's
+/// framing. That is a decision, not an oversight: the band above says these are
+/// past comparisons and says what the avatar's number measures, the numeral
+/// carries its percent sign so it is a proportion rather than a bare score, the
+/// tier beside the name is next-step guidance rather than a severity, and the
+/// full frame is one tap away on the detail sheet. Prefixing
+/// every row with "Closest match:" would push the name itself into truncation
+/// on a phone and turn a scannable list into a wall of qualifiers — which is
+/// the failure mode where nobody reads the qualifier at all. VoiceOver, which
+/// has no width to lose, does get the prefix; see `accessibilityText`.
 ///
 /// The meta run is `OCRMetaLine`, not a joined string: the three tokens are the
 /// same three in the same order the design pins, but the tier now carries the
@@ -308,9 +342,10 @@ private struct HistoryRow: View {
                     .tracking(-0.2)
                     .foregroundStyle(Theme.textPrimary)
                     // Two lines is the design's allowance at reading sizes; at
-                    // accessibility sizes a class name needs however many the
-                    // width leaves it, and truncating the *name of the finding*
-                    // is not an option this screen has.
+                    // accessibility sizes a category name needs however many the
+                    // width leaves it, and truncating the name of the *reference
+                    // category* the photo resembled is not an option this screen
+                    // has — a half-shown category name is a claim nobody wrote.
                     .lineLimit(isStacked ? nil : 2)
                 OCRMetaLine(
                     tier: record.riskLevel.displayLabel,
@@ -334,8 +369,16 @@ private struct HistoryRow: View {
         .accessibilityAddTraits(.isButton)
     }
 
+    /// The similarity figure, **with its percent sign**. It read as a bare
+    /// integer — "64" beside "Leukoplakia" — which is a number with no stated
+    /// unit sitting next to a category name, and a reader supplies the missing
+    /// unit themselves: certainty. The sign costs one glyph inside a 52pt
+    /// circle and makes the numeral a proportion again, which the band above
+    /// then names as similarity. `ConfidencePercent.text` is the same formatter
+    /// the hero, the sheet header and the class bars use, so this cannot drift
+    /// from the sheet a row opens.
     private var avatarView: some View {
-        Text(percentValue.formatted())
+        Text(percentText)
             .ocrFont(.rowTitle.size(17).weight(.semibold))
             // The confidence numeral is the app's signature, and tracking is
             // half of what makes it one: −3.6 on the hero's 76pt and −1.0 on
@@ -370,12 +413,26 @@ private struct HistoryRow: View {
         ConfidencePercent.value(record.probability)
     }
 
+    /// "64%" — the avatar's label. Four characters at 100% still fit the
+    /// circle; `minimumScaleFactor` on the label covers the rest.
+    private var percentText: String {
+        ConfidencePercent.text(record.probability)
+    }
+
     /// A full sentence, so VoiceOver never reads a bare numeral. Demo records
     /// say so out loud — the visual "Demo" token would otherwise be lost.
+    ///
+    /// A spoken label has no column width to run out of, so this is where the
+    /// row can afford the framing its visual form cannot: "closest match" ahead
+    /// of the category and "percent visual similarity" instead of "percent
+    /// confidence". A VoiceOver reader hears the qualifier the sighted reader
+    /// gets from the band above the list, rather than a condition name followed
+    /// by a number — which, read aloud with nothing around it, is the most
+    /// diagnosis-shaped sentence the app could produce.
     private var accessibilityText: String {
         let when = record.timestamp.formatted(.relative(presentation: .named))
         let tier = record.riskLevel.displayLabel.lowercased()
-        let base = "Scan from \(when): \(record.topClassName.lowercased()), \(percentValue) percent confidence, \(tier)"
+        let base = "Comparison from \(when): closest match \(record.topClassName.lowercased()), \(percentValue) percent visual similarity, \(tier)"
         return record.isDemoResult ? "\(base), demo result." : "\(base)."
     }
 }
@@ -415,58 +472,47 @@ enum RelativeToken {
 
 // MARK: - Detail sheet
 
-/// Detail sheet for one saved scan (design §6). Every value is read from the
-/// tapped record — its own class, confidence, tier, model and timestamp — so
-/// the sheet always matches the row that opened it.
+/// Detail sheet for one saved comparison (design §6). Every value is read from
+/// the tapped record — its own closest category, similarity score, tier, model
+/// and timestamp — so the sheet always matches the row that opened it.
 ///
-/// Deliberately no class breakdown: a stored record keeps only its top class,
-/// and a full score table belongs to a fresh analysis (`ResultView`).
+/// Deliberately no full ranking: a stored record keeps only its closest match,
+/// and a complete similarity table belongs to a fresh comparison
+/// (`ResultView`).
 ///
 /// This and `ResultView` are the two screens in the app where a user is looking
-/// at a *result*, so both carry the medical disclaimer as `OCRMedicalNotice`
-/// rather than as the grey 13pt footnote it used to be. A stored scan
-/// is if anything the riskier of the two: it is read cold, weeks later, with
-/// none of the context of having just taken the photo, and it is the record a
-/// person is most likely to show someone else. See `medicalNotice`.
+/// at a *result*, so both are framed the same way and both carry the same one
+/// piece of copy in the same place: `OCRResultDisclaimerLead` immediately under
+/// the header, stating `MedicalDisclaimer.resultLead` and opening the full
+/// notice. A stored scan is if anything the more consequential of the two: it is
+/// read cold, weeks later, with none of the context of having just taken the
+/// photo, and it is the record a person is most likely to show someone else — so
+/// it is the one that can least afford a header that looks like a diagnosis. See
+/// `header` for the slot mapping.
 struct HistoryDetailView: View {
     let record: ScanRecord
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var isShowingDisclaimer = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                OCRSheetHeader(
-                    eyebrow: "Scan detail",
-                    meta: record.timestamp.formatted(.relative(presentation: .named)),
-                    percentText: percentText,
-                    title: record.topClassName,
-                    tierText: record.riskLevel.displayLabel,
-                    onDone: { dismiss() }
-                )
+                header
 
                 // One gap, `spacingL`, between every sibling on the sheet — the
                 // same rhythm the Result sheet and Settings now run on. This
                 // used to be an 18pt stack with a 4pt top-up under the notice,
                 // so the first two gaps on the page were 22 and 18.
                 VStack(alignment: .leading, spacing: Theme.spacingL) {
+                    resultLead
+
                     if record.isDemoResult {
                         demoNotice
                     }
 
                     detailCard
-
-                    // Directly under the measured values, and — unlike the
-                    // Result sheet — *above* the photo rather than at the very
-                    // foot. `scanImage` is the one element on this sheet with
-                    // no height of its own: it is `scaledToFit` at full width,
-                    // so a portrait photo renders taller than 480pt and the
-                    // disclaimer that used to follow it began below the second
-                    // screen, with nothing after it to suggest it was there.
-                    // The photo is the only thing here the user has already
-                    // seen — they took it — so it is the one item that can
-                    // afford to be last.
-                    medicalNotice
 
                     scanImage
                 }
@@ -484,55 +530,112 @@ struct HistoryDetailView: View {
         // last element clear of the dissolve.
         .scrollEdgeEffectStyle(.soft, for: .bottom)
         .background { OCRAmbientBackground() }
+        .sheet(isPresented: $isShowingDisclaimer) {
+            // A re-read, not the acknowledgement gate — so "Done", never
+            // "I understand". Same component and same copy the Result sheet,
+            // Home and Settings open.
+            MedicalDisclaimerSheet(
+                title: "Medical disclaimer",
+                actionTitle: "Done",
+                onAction: { isShowingDisclaimer = false }
+            )
+            .medicalDisclaimerPresentation()
+        }
+    }
+
+    /// The same five-slot mapping `ResultView.header` uses, driven by this
+    /// record instead of a fresh result — the two sheets share `OCRSheetHeader`
+    /// and must not frame the same information two different ways.
+    ///
+    /// - **eyebrow** — "Saved comparison", so the frame is set before anything
+    ///   else is read.
+    /// - **meta** — when it was taken.
+    /// - **hero numeral** — the similarity score.
+    /// - **title** — the words "visual similarity", directly beneath the
+    ///   numeral, so the two read as one phrase. This slot used to hold
+    ///   `record.topClassName`, which put a condition name in the largest type
+    ///   on the screen with a percentage above it: a diagnosis with a
+    ///   confidence, on a record a person may open months later and show to
+    ///   someone.
+    /// - **tier** — the closest category, always prefixed "Closest match:", and
+    ///   the next-step tier on the line below it.
+    private var header: some View {
+        OCRSheetHeader(
+            eyebrow: "Saved comparison",
+            meta: record.timestamp.formatted(.relative(presentation: .named)),
+            percentText: percentText,
+            title: "visual similarity",
+            tierText: matchText,
+            onDone: { dismiss() }
+        )
     }
 
     private var percentText: String {
         ConfidencePercent.text(record.probability)
     }
 
+    /// The stored closest category and the record's next-step tier, on two
+    /// lines. The "Closest match:" prefix is the claim: the category name is
+    /// the label on a set of reference photographs that looked alike, never a
+    /// statement about what is in this person's mouth, and it never appears in
+    /// this header without it.
+    private var matchText: String {
+        "Closest match: \(record.topClassName)\n\(record.riskLevel.displayLabel)"
+    }
+
+    /// `MedicalDisclaimer.resultLead`, verbatim, directly under the header —
+    /// the same object in the same position `ResultView` puts it, for the same
+    /// reason. A stored record is read with none of the context of having just
+    /// taken the photo, so the frame has to arrive with the number rather than
+    /// wait at the bottom of the sheet.
+    ///
+    /// One warning object per results surface. This sheet used to carry the
+    /// lead *and* the full five-paragraph notice — the latter wedged between the
+    /// detail card and the photo, which is the middle of a scroll nobody reads
+    /// on purpose. The complete statement is now a tap inside this panel, which
+    /// is where a reader who wants it will look for it.
+    private var resultLead: some View {
+        OCRResultDisclaimerLead { isShowingDisclaimer = true }
+    }
+
     /// Clear notice that this saved scan came from the demo stand-in
-    /// classifier, so an old mock record can never read as real analysis —
+    /// classifier, so an old mock record can never read as a real comparison —
     /// even in a later build that ships a trained model. This wording is the
     /// detail sheet's own; `ResultView` speaks about a result being generated
     /// right now, which would be wrong for a stored record.
+    ///
+    /// Like the Result sheet's, it names the mechanism rather than only calling
+    /// the numbers placeholders: this is the screen where an old record is read
+    /// cold, and a column of History rows all carrying the same figure is only
+    /// legible as noise once a reader knows the figure came from the photo's
+    /// dimensions. See `MockLesionClassifier`.
+    ///
+    /// It is distinct from `resultLead` above and stacks with it without
+    /// merging: the lead is red and about the app on every record; this is the
+    /// app's salmon demo marker and about *this* record's data.
     private var demoNotice: some View {
         OCRDemoNotice(
             title: "Demo result.",
-            message: "This scan was made without a trained model. Its scores are generated placeholders and carry no medical meaning."
+            message: "This scan was made without a trained model. Its scores come from the photo's dimensions, not from what is in it, so every photo of the same size returns the same numbers. They carry no medical meaning."
         )
-    }
-
-    /// The disclaimer, drawn as the same object it is drawn as on the Result
-    /// sheet: `OCRMedicalNotice`, with `MedicalDisclaimer.full` passed
-    /// verbatim. Identical component, identical weight, identical title — the
-    /// component has only one form precisely so the notice cannot look like a
-    /// different kind of warning depending on which screen a person happens to
-    /// be standing on.
-    ///
-    /// It is deliberately unaffected by `record.riskLevel`. The `.high` tier
-    /// above it in the header is plain ambient text
-    /// (`RiskLevel.displayLabel`); this panel is a bordered, glyph-led
-    /// rectangle drawn the same for a low-risk record as for a high-risk one.
-    /// A reader can therefore never take "not a medical diagnosis" for "this
-    /// scan is bad" — the panel says nothing about the record it sits under,
-    /// and it looks it.
-    ///
-    /// Distinct, too, from `demoNotice` above: that one is amber and warns
-    /// about *placeholder data*, a defect of this particular record. This one
-    /// is red and warns about the app itself, on every record. Two different
-    /// claims, two different treatments, and they stack without merging.
-    private var medicalNotice: some View {
-        OCRMedicalNotice(MedicalDisclaimer.full)
     }
 
     /// Four 54pt rows. `Model` reads the version stored *on the record*, not
     /// the classifier currently installed, so history stays truthful across
     /// builds.
+    ///
+    /// Two of the four labels changed and the values behind them did not.
+    /// "Confidence" is a word about certainty in a conclusion, and the number
+    /// is not that — it is how alike two images looked, so the row says "Visual
+    /// similarity". "Risk tier" named a severity the app cannot assess; the
+    /// value it holds is now next-step guidance ("Worth asking about"), so the
+    /// row says "Next step". A guidance value under a severity label would have
+    /// been the worst of both.
     private var detailCard: some View {
         VStack(spacing: 0) {
-            detailRow("Confidence", percentText)
+            detailRow("Visual similarity", percentText)
             rowDivider
-            detailRow("Risk tier", record.riskLevel.displayLabel)
+            detailRow("Next step", record.riskLevel.displayLabel)
             rowDivider
             detailRow("Model", modelLabel)
             rowDivider
@@ -664,7 +767,7 @@ private func insertSampleRecords(into container: ModelContainer) {
     context.insert(ScanRecord(
         timestamp: .now.addingTimeInterval(-3_600),
         topClassID: "healthy",
-        topClassName: "No visible lesion",
+        topClassName: "Common tissue appearance",
         riskLevel: .low,
         probability: 0.91,
         modelVersion: "mock-0.0.0",

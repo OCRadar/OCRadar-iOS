@@ -337,7 +337,14 @@ private struct HistoryRow: View {
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(record.topClassName)
+                // A record that did not clear its model's floor is titled by
+                // the shared constant, never by the category it came closest
+                // to. A History list is read by scanning titles, and one row
+                // reading "Leukoplakia" among rows that earned their names is
+                // indistinguishable from a match.
+                Text(record.isBelowAbstainThreshold
+                     ? MedicalDisclaimer.noConfidentMatchRowTitle
+                     : record.topClassName)
                     .ocrFont(.rowTitle)
                     .tracking(-0.2)
                     .foregroundStyle(Theme.textPrimary)
@@ -348,7 +355,9 @@ private struct HistoryRow: View {
                     // has — a half-shown category name is a claim nobody wrote.
                     .lineLimit(isStacked ? nil : 2)
                 OCRMetaLine(
-                    tier: record.riskLevel.displayLabel,
+                    tier: record.isBelowAbstainThreshold
+                        ? MedicalDisclaimer.noConfidentMatchNextStep
+                        : record.riskLevel.displayLabel,
                     timestamp: RelativeToken.short(for: record.timestamp),
                     isDemo: record.isDemoResult
                 )
@@ -415,8 +424,13 @@ private struct HistoryRow: View {
 
     /// "64%" — the avatar's label. Four characters at 100% still fit the
     /// circle; `minimumScaleFactor` on the label covers the rest.
+    ///
+    /// An abstaining record shows an em dash instead. The avatar is the
+    /// highest-contrast element in the row and it sits where the eye lands
+    /// first; a percentage there is the row asserting a strength of match that
+    /// the title beside it has just declined to make.
     private var percentText: String {
-        ConfidencePercent.text(record.probability)
+        record.isBelowAbstainThreshold ? "—" : ConfidencePercent.text(record.probability)
     }
 
     /// A full sentence, so VoiceOver never reads a bare numeral. Demo records
@@ -431,8 +445,16 @@ private struct HistoryRow: View {
     /// diagnosis-shaped sentence the app could produce.
     private var accessibilityText: String {
         let when = record.timestamp.formatted(.relative(presentation: .named))
-        let tier = record.riskLevel.displayLabel.lowercased()
-        let base = "Comparison from \(when): closest match \(record.topClassName.lowercased()), \(percentValue) percent visual similarity, \(tier)"
+        // The spoken row abstains exactly as the visual one does. A VoiceOver
+        // reader must not be the only person in the app who hears the category
+        // name and the percentage the screen withheld.
+        let base: String
+        if record.isBelowAbstainThreshold {
+            base = "Comparison from \(when): \(MedicalDisclaimer.noConfidentMatchRowTitle). \(MedicalDisclaimer.noConfidentMatchNextStep)"
+        } else {
+            let tier = record.riskLevel.displayLabel.lowercased()
+            base = "Comparison from \(when): closest match \(record.topClassName.lowercased()), \(percentValue) percent visual similarity, \(tier)"
+        }
         return record.isDemoResult ? "\(base), demo result." : "\(base)."
     }
 }
@@ -512,6 +534,13 @@ struct HistoryDetailView: View {
                         demoNotice
                     }
 
+                    // Sits where the Result sheet puts the same card, above
+                    // the numbers rather than below them, so a record opened
+                    // cold months later is framed before it is read.
+                    if record.isBelowAbstainThreshold {
+                        noConfidentMatchCard
+                    }
+
                     detailCard
 
                     scanImage
@@ -564,14 +593,16 @@ struct HistoryDetailView: View {
             eyebrow: "Saved comparison",
             meta: record.timestamp.formatted(.relative(presentation: .named)),
             percentText: percentText,
-            title: "visual similarity",
+            title: record.isBelowAbstainThreshold
+                ? MedicalDisclaimer.noConfidentMatchTitle
+                : "visual similarity",
             tierText: matchText,
             onDone: { dismiss() }
         )
     }
 
     private var percentText: String {
-        ConfidencePercent.text(record.probability)
+        record.isBelowAbstainThreshold ? "—" : ConfidencePercent.text(record.probability)
     }
 
     /// The stored closest category and the record's next-step tier, on two
@@ -580,7 +611,8 @@ struct HistoryDetailView: View {
     /// statement about what is in this person's mouth, and it never appears in
     /// this header without it.
     private var matchText: String {
-        "Closest match: \(record.topClassName)\n\(record.riskLevel.displayLabel)"
+        if record.isBelowAbstainThreshold { return MedicalDisclaimer.noConfidentMatchNextStep }
+        return "Closest match: \(record.topClassName)\n\(record.riskLevel.displayLabel)"
     }
 
     /// `MedicalDisclaimer.resultLead`, verbatim, directly under the header —
@@ -635,7 +667,7 @@ struct HistoryDetailView: View {
         VStack(spacing: 0) {
             detailRow("Visual similarity", percentText)
             rowDivider
-            detailRow("Next step", record.riskLevel.displayLabel)
+            detailRow("Next step", nextStepText)
             rowDivider
             detailRow("Model", modelLabel)
             rowDivider
@@ -643,6 +675,30 @@ struct HistoryDetailView: View {
         }
         .background(Theme.surface, in: .rect(cornerRadius: Theme.cardCorner))
         .ocrTopEdgeHighlight(RoundedRectangle(cornerRadius: Theme.cardCorner))
+    }
+
+    /// The next-step value in the detail card.
+    ///
+    /// An abstaining record has no tier, because it has no category — but the
+    /// row cannot simply vanish. A detail card that shows "Visual similarity —"
+    /// and then skips straight to "Model" reads as a record with data missing,
+    /// which invites the reader to treat the whole entry as a glitch rather
+    /// than as the app declining to make a claim.
+    private var nextStepText: String {
+        record.isBelowAbstainThreshold
+            ? MedicalDisclaimer.noConfidentMatchNextStep
+            : record.riskLevel.displayLabel
+    }
+
+    /// The full statement, verbatim, in the same card shape `ResultView` uses.
+    private var noConfidentMatchCard: some View {
+        OCRCard(corner: Theme.panelCorner) {
+            Text(MedicalDisclaimer.noConfidentMatch)
+                .ocrFont(.body)
+                .foregroundStyle(Theme.textSecondary)
+                .ocrBodyLeading(size: 14.5)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var modelLabel: String {

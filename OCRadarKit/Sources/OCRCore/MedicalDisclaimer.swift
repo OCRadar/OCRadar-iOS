@@ -34,6 +34,9 @@ import Foundation
 /// - ``capture`` — before the shutter, where the expectation is set.
 /// - ``resultLead`` — beside the result itself, where the consequence is
 ///   highest.
+/// - ``noConfidentMatch`` and its three compact forms — everywhere a category
+///   name would have gone, when the comparison did not clear the model's
+///   confidence threshold.
 ///
 /// # Restraint is part of the design
 ///
@@ -85,4 +88,75 @@ public enum MedicalDisclaimer {
     /// a reader is least likely to scroll for context.
     public static let resultLead =
         "A visual comparison, not a diagnosis. Only a dentist or physician can tell you what this is."
+
+    // MARK: - No confident match
+
+    /// The full statement shown when the closest reference category did not
+    /// reach the model's confidence threshold.
+    ///
+    /// # Three things have to be true of this at once
+    ///
+    /// **It must not read as reassurance.** "Nothing found" is a rule-out, and
+    /// ruling out is the one thing ``full`` promises the app never does. A
+    /// person who reads this as "the app checked and I'm fine" has been given
+    /// a clearance by a screen that was trying to admit it had nothing to say.
+    ///
+    /// **It must not read as alarm.** The mirror-image failure is a reader who
+    /// concludes that their photo was *too unusual to classify* — that they
+    /// have something so far outside the reference set it broke the app. The
+    /// ordinary causes are lighting, focus and angle, and saying so is what
+    /// keeps the state boring.
+    ///
+    /// **It must locate the failure in the comparison, not in the person.**
+    /// The subject of these sentences is the comparison and the photograph.
+    /// Nothing here is a statement about the reader's mouth, because a failed
+    /// comparison contains no information about the reader's mouth.
+    ///
+    /// The last paragraph is the one that matters most, and it is deliberately
+    /// the same advice the app gives after a *successful* comparison: what to
+    /// do about a thing that worries you does not depend on what this app
+    /// managed to say about it.
+    ///
+    /// Rendered in a card that does not truncate. Paragraph breaks are
+    /// load-bearing.
+    public static let noConfidentMatch = """
+        This photo didn't look clearly like any of the reference categories, \
+        so OCRadar isn't naming one.
+
+        That is not a finding. It doesn't mean nothing is there, and it \
+        doesn't mean anything is — it means this comparison couldn't be made \
+        with confidence. Lighting, focus and angle are the usual reasons, and \
+        the reference categories don't cover everything.
+
+        If something in your mouth concerns you, have it looked at. That was \
+        true before this screen and it's true now.
+        """
+
+    /// The hero label on a result sheet, in the slot ``"visual similarity"``
+    /// occupies for a normal result.
+    ///
+    /// Lowercase for the same reason its sibling is: the slot sits directly
+    /// under the hero numeral and is read as the second half of a phrase the
+    /// numeral starts. There is no numeral in this state — the sheet shows an
+    /// em dash — so these words carry the slot alone.
+    public static let noConfidentMatchTitle = "no confident match"
+
+    /// The compact title for rows and list surfaces, where a category name
+    /// would otherwise sit: Home's recent-scan hero, Home's rows, History's
+    /// rows.
+    ///
+    /// Sentence case, unlike ``noConfidentMatchTitle``, because in those
+    /// surfaces it is a title in its own right rather than the tail of a
+    /// phrase.
+    public static let noConfidentMatchRowTitle = "No confident match"
+
+    /// What replaces the next-step tier when there is no category to carry one.
+    ///
+    /// A row whose guidance slot is *blank* where every other row carries an
+    /// action reads as "nothing to do here", which is the reassurance this
+    /// state must never give. So the slot keeps an action, and the action is
+    /// the one that does not depend on the comparison having worked. Phrased
+    /// as guidance in the same register as `RiskLevel.displayLabel`, and for
+    /// the same reason — it says what to do, never how bad anything is.
+    public static let noConfidentMatchNextStep = "Ask someone if it concerns you"
 }

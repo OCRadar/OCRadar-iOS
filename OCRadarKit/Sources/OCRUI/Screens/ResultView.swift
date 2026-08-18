@@ -62,7 +62,14 @@ struct ResultView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
 
-                if let top = result.top {
+                // Order matters: the abstaining case is checked before the
+                // normal one, because `result.top` is non-nil in both. A
+                // rejected comparison still has a highest score — that is
+                // exactly what makes it dangerous to render with the ordinary
+                // branch.
+                if result.isBelowAbstainThreshold {
+                    noConfidentMatchContent
+                } else if let top = result.confidentTop {
                     content(for: top)
                 } else {
                     emptyScoresContent
@@ -117,6 +124,9 @@ struct ResultView: View {
     ///   which is the only claim the app can support.
     /// - **tier** — `matchText`: the closest-matching category, explicitly
     ///   prefixed "Closest match:", then the next-step tier on its own line.
+    ///   When the comparison fell below the model's confidence floor, this slot
+    ///   carries `MedicalDisclaimer.noConfidentMatchNextStep` instead and no
+    ///   category name appears in the header at all.
     ///   The category name is therefore always *below* and *smaller than* the
     ///   comparison framing, and never appears without it.
     private var header: some View {
@@ -143,7 +153,13 @@ struct ResultView: View {
     /// scan saved by this very sheet must not read a point apart in the History
     /// row it creates.
     private var heroPercentText: String {
-        guard let top = result.top else { return "—" }
+        // An abstaining result takes the em dash, the same as one with no
+        // scores at all. The closest score is still knowable — it is in the
+        // similarity ranking further down the sheet — but it must not be the
+        // 76pt headline. A percentage in that slot beside "no confident match"
+        // is read as the strength of a finding, and there is no finding; it is
+        // the number the app has just declined to act on.
+        guard !result.isBelowAbstainThreshold, let top = result.top else { return "—" }
         return ConfidencePercent.text(top.probability)
     }
 
@@ -155,7 +171,8 @@ struct ResultView: View {
     /// same percentage under these two words reads as what it is, which is how
     /// closely one photograph resembled a set of reference photographs.
     private var heroLabel: String {
-        result.top == nil ? "no comparison available" : "visual similarity"
+        if result.isBelowAbstainThreshold { return MedicalDisclaimer.noConfidentMatchTitle }
+        return result.top == nil ? "no comparison available" : "visual similarity"
     }
 
     /// The closest reference category and the next step, on two lines.
@@ -169,7 +186,12 @@ struct ResultView: View {
     /// ("Worth asking about"), not a severity. Nothing here says "risk", and
     /// nothing here may be made to.
     private var matchText: String {
-        guard let top = result.top else { return "No scores returned" }
+        // No category cleared the floor, so no category is named here — not
+        // even prefixed. "Closest match: Leukoplakia" under the words "no
+        // confident match" would hand back with the second line precisely what
+        // the first line withheld.
+        if result.isBelowAbstainThreshold { return MedicalDisclaimer.noConfidentMatchNextStep }
+        guard let top = result.confidentTop else { return "No scores returned" }
         return "Closest match: \(top.displayName)\n\(top.riskLevel.displayLabel)"
     }
 
@@ -205,6 +227,50 @@ struct ResultView: View {
             // number, which is where it is actually read; repeating it here in a
             // second red panel is what taught readers to skip the first one.
             professionalCallout(for: top)
+        }
+        .modifier(SheetBodyInsets())
+    }
+
+    /// The sheet when the comparison did not clear the model's confidence
+    /// floor.
+    ///
+    /// It keeps the same objects in the same order as a normal result — lead,
+    /// demo notice, an explanatory card where the per-class summary would be,
+    /// the similarity ranking, the closing guidance — because a state that
+    /// rearranges the page announces itself as an error, and this is not an
+    /// error. It is an ordinary outcome of comparing a photograph with a small
+    /// set of reference photographs.
+    ///
+    /// The similarity ranking stays. Withholding the numbers as well as the
+    /// name would leave a reader unable to see whether the call was close or
+    /// nowhere near, and the card's own subtitle already frames the bars as
+    /// resemblance rather than verdicts. What the sheet withholds is the
+    /// *claim*: no category is named as the match anywhere above this card.
+    ///
+    /// The per-class summary is withheld for the same reason it is withheld
+    /// for a demo result — it is medical guidance attached to a category, and
+    /// no category has been established.
+    private var noConfidentMatchContent: some View {
+        VStack(alignment: .leading, spacing: Theme.spacingL) {
+            resultLead
+
+            if result.isDemoResult {
+                demoNotice
+            }
+
+            OCRCard(corner: Theme.panelCorner) {
+                Text(MedicalDisclaimer.noConfidentMatch)
+                    .ocrFont(.body)
+                    .foregroundStyle(Theme.textSecondary)
+                    .ocrBodyLeading(size: 14.5)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            allClassesCard
+
+            // No category means no tier, so the only guidance that can apply is
+            // the one that never depended on the comparison succeeding.
+            genericCallout
         }
         .modifier(SheetBodyInsets())
     }
@@ -431,6 +497,30 @@ private struct SheetBodyInsets: ViewModifier {
         scores: scores,
         modelVersion: "mock-0.0.0",
         inferenceDuration: .milliseconds(180)
+    )
+    ResultView(result: result)
+        .environment(\.lesionClassifier, MockLesionClassifier())
+        .preferredColorScheme(.dark)
+}
+
+#Preview("No confident match") {
+    let classes = ModelManifest.mockOralLesions.classes
+    // Nothing resembles anything much: the top score is 0.31 against a floor
+    // of 0.45, which is the shape of a photo the reference set does not cover.
+    let probabilities: [Double] = [0.31, 0.22, 0.19, 0.16, 0.12]
+    let scores = zip(classes, probabilities).map { info, probability in
+        LabelScore(
+            id: info.id,
+            displayName: info.displayName,
+            riskLevel: info.riskLevel,
+            probability: probability
+        )
+    }
+    let result = ClassificationResult(
+        scores: scores,
+        modelVersion: "1.0.0",
+        inferenceDuration: .milliseconds(180),
+        abstainThreshold: 0.45
     )
     ResultView(result: result)
         .environment(\.lesionClassifier, MockLesionClassifier())

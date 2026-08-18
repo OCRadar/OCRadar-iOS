@@ -107,6 +107,13 @@ public final class CoreMLLesionClassifier: LesionClassifying, @unchecked Sendabl
     /// Vision center-crops and scales the image to the model's input size.
     /// Observations whose identifiers are absent from the manifest are
     /// skipped; the returned scores are sorted most-probable first.
+    ///
+    /// The confidences are the exported graph's softmax output, and the export
+    /// pipeline divides the logits by a temperature fitted on validation data
+    /// before that softmax. So these probabilities are the *calibrated* ones,
+    /// which is what makes comparing them against
+    /// `ModelManifest.abstainThreshold` meaningful — the threshold was chosen
+    /// on the same scale.
     public func classify(_ image: CGImage) async throws -> ClassificationResult {
         let clock = ContinuousClock()
         let start = clock.now
@@ -140,7 +147,13 @@ public final class CoreMLLesionClassifier: LesionClassifying, @unchecked Sendabl
         return ClassificationResult(
             scores: scores,
             modelVersion: manifest.modelVersion,
-            inferenceDuration: start.duration(to: clock.now)
+            inferenceDuration: start.duration(to: clock.now),
+            // Carried from the manifest so the decision travels with the
+            // result rather than being re-derived by each screen against a
+            // classifier it would have to reach for. A result is then
+            // self-describing: everything needed to know whether it may name a
+            // category is inside it, including once it has been persisted.
+            abstainThreshold: manifest.abstainThreshold
         )
     }
 }

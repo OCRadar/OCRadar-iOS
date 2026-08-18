@@ -221,7 +221,7 @@ struct HomeView: View {
                 // Same guard the sheet header carries: the 76pt numeral scales
                 // with Dynamic Type and the hero clips its own bounds, so it
                 // has to shrink rather than run under the panel edge.
-                Text(ConfidencePercent.text(record.probability))
+                Text(heroPercentText(for: record))
                     .ocrFont(.heroNumeral)
                     .tracking(-3.6)
                     .monospacedDigit()
@@ -253,12 +253,20 @@ struct HomeView: View {
                 // `ModelManifest.ClassInfo.displayName` says at the source that
                 // it must be presented as "looks most similar to X" and never
                 // as "you have X". Four words is what that costs here.
-                Text("Looks most similar to")
-                    .ocrFont(.meta.weight(.medium))
-                    .foregroundStyle(Theme.onGradient())
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 3)
-                Text(record.topClassName)
+                //
+                // The lead-in is withheld entirely when the comparison did not
+                // clear its model's floor. "Looks most similar to" is a claim
+                // in its own right — it asserts that a resemblance was found —
+                // and printing it above the words "No confident match" would
+                // make the hero contradict itself in two consecutive lines.
+                if !record.isBelowAbstainThreshold {
+                    Text("Looks most similar to")
+                        .ocrFont(.meta.weight(.medium))
+                        .foregroundStyle(Theme.onGradient())
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 3)
+                }
+                Text(heroTitle(for: record))
                     .ocrFont(.screenTitle)
                     .tracking(-0.7)
                     .fixedSize(horizontal: false, vertical: true)
@@ -299,19 +307,45 @@ struct HomeView: View {
     /// for a demo record. The tier is what to do, never how bad it is; see
     /// `RiskLevel.displayLabel`.
     private func tierLine(for record: ScanRecord) -> String {
-        record.isDemoResult
-            ? "\(record.riskLevel.displayLabel) · demo result"
+        let tier = record.isBelowAbstainThreshold
+            ? MedicalDisclaimer.noConfidentMatchNextStep
             : record.riskLevel.displayLabel
+        return record.isDemoResult ? "\(tier) · demo result" : tier
+    }
+
+    /// The hero numeral, or an em dash when the comparison was not made with
+    /// confidence.
+    ///
+    /// This is the largest object on the first screen anyone opens. A
+    /// percentage here under the words "No confident match" is the app
+    /// quantifying a comparison it has just said it could not make.
+    private func heroPercentText(for record: ScanRecord) -> String {
+        record.isBelowAbstainThreshold ? "—" : ConfidencePercent.text(record.probability)
+    }
+
+    /// The 26pt line under the numeral: a reference category, or the shared
+    /// constant that replaces one.
+    private func heroTitle(for record: ScanRecord) -> String {
+        record.isBelowAbstainThreshold
+            ? MedicalDisclaimer.noConfidentMatchRowTitle
+            : record.topClassName
     }
 
     /// VoiceOver gets the same framing the sighted hero now carries: the
     /// spoken label leads with "looks most similar to" rather than naming the
     /// category flat, so the two readings of this block make the same claim.
     private func latestAccessibilityLabel(for record: ScanRecord) -> String {
-        var label = "Most recent scan: looks most similar to "
-        label += "\(record.topClassName.lowercased()), "
-        label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
-        label += "\(record.riskLevel.displayLabel.lowercased()), "
+        var label: String
+        if record.isBelowAbstainThreshold {
+            // Spoken and sighted readings abstain together.
+            label = "Most recent scan: \(MedicalDisclaimer.noConfidentMatchRowTitle). "
+            label += "\(MedicalDisclaimer.noConfidentMatchNextStep), "
+        } else {
+            label = "Most recent scan: looks most similar to "
+            label += "\(record.topClassName.lowercased()), "
+            label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
+            label += "\(record.riskLevel.displayLabel.lowercased()), "
+        }
         label += HomeFormat.relative(record.timestamp)
         if record.isDemoResult {
             label += ", demo result"
@@ -441,7 +475,9 @@ struct HomeView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(record.topClassName)
+                Text(record.isBelowAbstainThreshold
+                     ? MedicalDisclaimer.noConfidentMatchRowTitle
+                     : record.topClassName)
                     .ocrFont(.rowTitle)
                     .tracking(-0.2)
                     .foregroundStyle(Theme.textPrimary)
@@ -458,7 +494,9 @@ struct HomeView: View {
                 // another, and with this row's own VoiceOver label
                 // below, which has always said ", demo result".
                 OCRMetaLine(
-                    tier: record.riskLevel.displayLabel,
+                    tier: record.isBelowAbstainThreshold
+                        ? MedicalDisclaimer.noConfidentMatchNextStep
+                        : record.riskLevel.displayLabel,
                     timestamp: HomeFormat.relative(record.timestamp),
                     isDemo: record.isDemoResult
                 )
@@ -484,7 +522,7 @@ struct HomeView: View {
     /// `ConfidencePercent.text` is the formatter the hero and both sheets use,
     /// so this row can never read a point apart from the sheet it opens.
     private func railNumeral(_ record: ScanRecord) -> some View {
-        Text(ConfidencePercent.text(record.probability))
+        Text(record.isBelowAbstainThreshold ? "—" : ConfidencePercent.text(record.probability))
             .ocrFont(.screenTitle)
             .tracking(-1.0)
             .monospacedDigit()
@@ -505,9 +543,14 @@ struct HomeView: View {
 
     private func rowAccessibilityLabel(for record: ScanRecord) -> String {
         var label = "Scan from \(HomeFormat.relative(record.timestamp)): "
-        label += "looks most similar to \(record.topClassName.lowercased()), "
-        label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
-        label += record.riskLevel.displayLabel.lowercased()
+        if record.isBelowAbstainThreshold {
+            label += "\(MedicalDisclaimer.noConfidentMatchRowTitle). "
+            label += MedicalDisclaimer.noConfidentMatchNextStep
+        } else {
+            label += "looks most similar to \(record.topClassName.lowercased()), "
+            label += "\(ConfidencePercent.value(record.probability)) percent visual similarity, "
+            label += record.riskLevel.displayLabel.lowercased()
+        }
         if record.isDemoResult {
             label += ", demo result"
         }
@@ -575,6 +618,14 @@ struct HomeView: View {
     }
 
     /// Oldest first, so the line reads left to right.
+    ///
+    /// Abstaining scans are plotted like any other, and deliberately so. The
+    /// chart's subject is closest-match *similarity*, which a rejected
+    /// comparison still has — it is simply low. Filtering those points out
+    /// would drop the lowest values from the series and tilt every trend
+    /// upward, which is a worse distortion than plotting them; the y value is
+    /// the honest measurement either way, and it is the *naming* of a category
+    /// that abstention withholds, not the number.
     private var chartPoints: [HomeChartPoint] {
         records.reversed().map { record in
             HomeChartPoint(

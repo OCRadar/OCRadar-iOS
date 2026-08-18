@@ -260,36 +260,7 @@ struct ScanView: View {
                         acquiring: isAcquiringCamera
                     )
 
-                    // The one label on this stage that had no backdrop of its
-                    // own. `textSecondary` measures 6.75:1 over `stageFill`,
-                    // which is the number a dark stand-in stage gives it — but
-                    // this text is drawn on the *live frame*, and over a
-                    // blown-out one it measures **2.93:1**, under the 4.5:1
-                    // floor this file enforces on the pill (3.06:1 rejected),
-                    // the library circle (2.47:1) and the analyzing capsule
-                    // (2.47:1). It takes the treatment those established
-                    // instead: `numeralMuted` on `stageFill`-tinted glass —
-                    // ~7.4:1 on the same material the pill measures 7.50:1 on —
-                    // falling back to the opaque `surfaceRaised` (11.7:1) under
-                    // Reduce Transparency, exactly as they do.
-                    //
-                    // The plate hugs the copy rather than spanning the stage:
-                    // `Text` takes its ideal width, so the glass is only as wide
-                    // as the two lines and the framing view stays open.
-                    Text("Frame the area that concerns you\nHold steady in good light")
-                        .ocrFont(.body.size(14))
-                        .foregroundStyle(Theme.numeralMuted)
-                        .multilineTextAlignment(.center)
-                        .ocrBodyLeading(size: 14)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .ocrGlass(
-                            .rect(cornerRadius: Theme.rowCorner),
-                            tint: Theme.stageFill.opacity(0.5),
-                            fallback: Theme.surfaceRaised,
-                            reduceTransparency: reduceTransparency
-                        )
-                        .padding(.horizontal, Theme.spacingL)
+                    framingCaption
 
                     Spacer(minLength: Theme.spacingM)
 
@@ -307,13 +278,97 @@ struct ScanView: View {
         // flash toggle is omitted rather than shipped as a dead button.
     }
 
+    /// The plate under the reticle: how to take the photo, and what taking it
+    /// will and will not get you.
+    ///
+    /// **The second line is the point of this screen carrying any notice at
+    /// all.** Every other surface in the app can only correct an expectation
+    /// after the result exists; this is the one moment before it does. So
+    /// `MedicalDisclaimer.capture` is set here, verbatim — the reader is told
+    /// that what follows is a similarity comparison *while they are aiming*,
+    /// not after they have been handed a category name and a percentage.
+    ///
+    /// **One plate, not two.** The instruction that produced this was explicit
+    /// that it must not become a banner competing with the shutter, and a
+    /// second bordered object on a live camera feed is exactly that. Sharing
+    /// the framing caption's plate makes it one compact block of "here is what
+    /// this is" rather than a warning bolted onto the viewfinder — and it
+    /// inherits the contrast argument the caption already won (see the note
+    /// below on `numeralMuted` over `stageFill`-tinted glass), instead of
+    /// needing a second, weaker one.
+    ///
+    /// It is set a step down from the framing lines — `.footnote`, at the 1.6
+    /// leading the app gives every piece of disclaimer copy — because it is
+    /// context rather than an instruction. It is **not** dimmed: the colour
+    /// stays `numeralMuted` for both lines, since the one thing this line must
+    /// not be is the quietest text on a screen drawn over an arbitrary
+    /// photograph. Size separates the two lines; contrast does not.
+    ///
+    /// # Why `numeralMuted` on tinted glass, and not `textSecondary`
+    ///
+    /// This is the one label on this stage that had no backdrop of its own.
+    /// `textSecondary` measures 6.75:1 over `stageFill`, which is the number a
+    /// dark stand-in stage gives it — but this text is drawn on the *live
+    /// frame*, and over a blown-out one it measures **2.93:1**, under the 4.5:1
+    /// floor this file enforces on the pill (3.06:1 rejected), the library
+    /// circle (2.47:1) and the analyzing capsule (2.47:1). It takes the
+    /// treatment those established instead: `numeralMuted` on
+    /// `stageFill`-tinted glass — ~7.4:1 on the same material the pill measures
+    /// 7.50:1 on — falling back to the opaque `surfaceRaised` (11.7:1) under
+    /// Reduce Transparency, exactly as they do.
+    private var framingCaption: some View {
+        // The plate hugs the copy rather than spanning the stage: `Text` takes
+        // its ideal width, so the glass is only as wide as the copy needs and
+        // the framing view stays open. The outer `spacingL` inset is what
+        // bounds it — the capture line's ideal width is a single long line, so
+        // that inset is now load-bearing rather than cosmetic: it is what makes
+        // the sentence wrap instead of running the plate edge to edge.
+        VStack(spacing: 9) {
+            Text("Frame the area that concerns you\nHold steady in good light")
+                .ocrFont(.body.size(14))
+                .ocrBodyLeading(size: 14)
+            // The capture line carries the notice's own ink and glyph so it
+            // reads as the same object the result and first-launch gate use.
+            // It is always on screen while framing — seen before every scan,
+            // costing no tap and never blocking the shutter.
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .ocrFont(.footnote)
+                    .accessibilityHidden(true)
+                Text(MedicalDisclaimer.capture)
+                    .ocrFont(.footnote)
+                    .ocrFootnoteLeading(size: OCRTextStyle.footnote.size)
+            }
+            .foregroundStyle(Theme.medicalNoticeInk)
+            .accessibilityElement(children: .combine)
+        }
+        .foregroundStyle(Theme.numeralMuted)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .ocrGlass(
+            .rect(cornerRadius: Theme.rowCorner),
+            tint: Theme.stageFill.opacity(0.5),
+            fallback: Theme.surfaceRaised,
+            reduceTransparency: reduceTransparency
+        )
+        .padding(.horizontal, Theme.spacingL)
+    }
+
     /// Everything below the framing aid — caption, the 16pt gap, the 78pt
     /// shutter row and the 26pt bottom padding — is incompressible, so the
     /// radar is what has to give on a short stage. On a 667pt device the stage
     /// is only 397 tall and the design's 250pt radar put the layout ~10pt over
     /// budget, which the stage's `clipShape` cut off rather than scrolled.
     private func radarDiameter(inStageHeight height: CGFloat) -> CGFloat {
-        let reservedBelowRadar: CGFloat = 165
+        // 165 when the caption was two lines. `framingCaption` now carries
+        // `MedicalDisclaimer.capture` as well, which wraps to about three
+        // 13pt lines inside the plate — roughly 65pt more incompressible
+        // content below the radar. Left at 165 the extra height would have come
+        // out of the stage's `clipShape`, and the first thing cut off the
+        // bottom of a short stage would have been the shutter.
+        let reservedBelowRadar: CGFloat = 230
         guard height > 0 else { return Self.designRadarDiameter }
         return min(
             Self.designRadarDiameter,
@@ -557,7 +612,7 @@ struct ScanView: View {
     private var analyzingCapsule: some View {
         HStack(spacing: 11) {
             OCRStatusDot(color: Theme.accent, pulsing: true)
-            Text("Analyzing on device…")
+            Text("Comparing on device…")
                 .ocrFont(.rowTitle.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
         }
@@ -569,7 +624,7 @@ struct ScanView: View {
             reduceTransparency: reduceTransparency
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Analyzing on device")
+        .accessibilityLabel("Comparing on device")
     }
 
     /// "Retake" and "Analyze" split the row 1 : 1.4, per the spec.
@@ -587,8 +642,18 @@ struct ScanView: View {
     /// app — a full-bleed photograph the user chose — and an opaque capsule is
     /// the only thing that makes their contrast independent of it. Glass is for
     /// the small chrome floating *over* this stage, not for the two controls
-    /// the whole screen resolves to. "Analyze" keeps the solid `buttonGradient`
+    /// the whole screen resolves to. "Compare" keeps the solid `buttonGradient`
     /// for the same reason, plus it must read as the primary.
+    ///
+    /// **Why the primary says "Compare" and not "Analyze".** This is the button
+    /// that produces the result, so it is the button that promises what the
+    /// result will be. "Analyze" promises an assessment — the app performing a
+    /// judgement on the photo — and the result sheet it opens deliberately does
+    /// not do that: it is headed "Visual comparison", its meta line reads
+    /// "Compared just now", and `ResultView` states plainly that "analyzed" is
+    /// the vocabulary of an assessment. A button labelled with the verb the
+    /// destination screen disowns is the app contradicting itself at the exact
+    /// moment of consequence, and the button is what a reader believes.
     private func reviewActions(for image: CGImage) -> some View {
         GeometryReader { proxy in
             let gap = Theme.spacingS
@@ -601,7 +666,7 @@ struct ScanView: View {
                 .buttonStyle(OCRSecondaryButtonStyle(height: actionHeight))
                 .frame(width: retakeWidth)
 
-                Button("Analyze") {
+                Button("Compare") {
                     Task { await analyze(image) }
                 }
                 .buttonStyle(OCRPrimaryButtonStyle(height: actionHeight))
@@ -617,7 +682,7 @@ struct ScanView: View {
         fallbackStage(
             struckThrough: true,
             title: "Camera access needed",
-            message: "OCRadar uses the camera to photograph areas inside your mouth. Allow camera access in Settings to scan, or analyze a photo from your library instead."
+            message: "OCRadar uses the camera to photograph areas inside your mouth. Allow camera access in Settings to scan, or compare a photo from your library instead."
         ) {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -639,7 +704,7 @@ struct ScanView: View {
         fallbackStage(
             struckThrough: false,
             title: "Camera unavailable",
-            message: "No camera is available on this device. Choose a photo from your library to analyze instead."
+            message: "No camera is available on this device. Choose a photo from your library to compare instead."
         ) {
             libraryPickerButton(title: "Choose Photo")
                 .buttonStyle(OCRPrimaryButtonStyle(height: Self.ctaHeight))
@@ -694,6 +759,24 @@ struct ScanView: View {
                 actions()
             }
             .frame(maxWidth: 250)
+
+            // Every fallback here still leads to a comparison — the library
+            // picker is a scan path, not a dead end — so the capture line
+            // belongs on these stages too. Without it the whole
+            // photo-library route, which is the only route on a device with
+            // no camera, would reach a result having shown no notice first.
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .ocrFont(.footnote)
+                    .accessibilityHidden(true)
+                Text(MedicalDisclaimer.capture)
+                    .ocrFont(.footnote)
+                    .ocrFootnoteLeading(size: OCRTextStyle.footnote.size)
+            }
+            .foregroundStyle(Theme.medicalNoticeInk)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .padding(.top, 26)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

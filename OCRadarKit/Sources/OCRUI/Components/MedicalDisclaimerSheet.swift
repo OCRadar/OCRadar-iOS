@@ -11,9 +11,17 @@ import SwiftUI
 /// by design.
 ///
 /// The body copy is always `MedicalDisclaimer.full`, never paraphrased
-/// (honesty rule 4). Callers vary `actionTitle` because the gate's
-/// "I understand" sets `hasAcknowledgedDisclaimer` while a re-read's "Done"
-/// must not look like it re-arms it.
+/// (honesty rule 4). That string is where the app's position is stated in full:
+/// an awareness tool, not a medical device, no regulatory review, no diagnosis
+/// and no ruling anything out — a visual comparison that can be wrong in both
+/// directions. This sheet's job is to present it whole and unhurried, which is
+/// why the body scrolls rather than truncating and why nothing here abbreviates
+/// it.
+///
+/// Callers vary `actionTitle` because the gate's acknowledgement sets
+/// `hasAcknowledgedDisclaimer` while a re-read's "Done" must not look like it
+/// re-arms it. The gate passes a label that names what is being acknowledged
+/// (see `RootView`); this component never invents one.
 ///
 /// `noticeLockup` heads the copy with the same red warning glyph and the same
 /// `OCRMedicalNotice.title` the banners on Home and in Settings carry, so this
@@ -81,14 +89,25 @@ struct MedicalDisclaimerSheet: View {
                 .padding(.bottom, Theme.spacingXL)
             }
             .scrollIndicators(.hidden)
-            // The notice runs under the "I understand" footer rather than
-            // stopping dead above it, so there is a visible cue that the copy
+            // The notice runs under the footer button rather than stopping dead
+            // above it, so there is a visible cue that the copy
             // continues. Bottom only: a soft top edge would fade the lockup's
             // red title under the gradient header, which is the one line here
             // that has to arrive at full strength.
             .scrollEdgeEffectStyle(.soft, for: .bottom)
-            Button(actionTitle, action: onAction)
-                .buttonStyle(OCRPrimaryButtonStyle())
+            // Built from a `Text` rather than `Button(_:action:)` so the label
+            // can be centred when it wraps. The gate's label is a sentence —
+            // "I understand this is not a diagnosis" — and on a narrow device
+            // or at a large Dynamic Type size it takes two lines; a capsule
+            // whose second line is ragged left reads as a layout accident. The
+            // style's own `minHeight` lets the capsule grow to hold it, so the
+            // label is never truncated: an acknowledgement the reader cannot
+            // read in full is not one.
+            Button(action: onAction) {
+                Text(actionTitle)
+                    .multilineTextAlignment(.center)
+            }
+            .buttonStyle(OCRPrimaryButtonStyle())
                 .padding(.horizontal, Theme.pageMargin)
                 .padding(.bottom, 30)
                 // 30 from the bottom of the sheet, as measured — not 30 above

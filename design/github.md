@@ -21,12 +21,18 @@ commit: (unknown — read via attached local folder, no commit sha resolved)
 
 | Project screen | Built from repo files |
 | --- | --- |
-| Home | OCRadarKit/Sources/OCRUI/Screens/HomeView.swift, Components/Theme.swift, Components/GlassCard.swift |
+| Home | OCRadarKit/Sources/OCRUI/Screens/HomeView.swift, Components/Theme.swift, Components/OCRSurfaces.swift |
 | Scan | OCRadarKit/Sources/OCRUI/Screens/ScanView.swift |
-| History | OCRadarKit/Sources/OCRUI/Screens/HistoryView.swift |
+| History | OCRadarKit/Sources/OCRUI/Screens/HistoryView.swift, Components/OCRRowChrome.swift |
 | Settings | OCRadarKit/Sources/OCRUI/Screens/SettingsView.swift |
-| Result sheet | OCRadarKit/Sources/OCRUI/Screens/ResultView.swift, Components/ScoreRow.swift, Components/RiskBadge.swift |
-| Disclaimer sheet + tab shell | OCRadarKit/Sources/OCRUI/RootView.swift |
+| Result sheet | OCRadarKit/Sources/OCRUI/Screens/ResultView.swift, Components/OCRIndicators.swift (`OCRClassBar`), Components/OCRMedicalNotice.swift |
+| Disclaimer sheet + tab shell | OCRadarKit/Sources/OCRUI/RootView.swift, Components/MedicalDisclaimerSheet.swift |
+
+`GlassCard.swift`, `ScoreRow.swift` and `RiskBadge.swift` were listed here and do
+not exist. `RiskBadge` was the tier-coloured badge; it was deleted deliberately,
+and the app now renders tiers as plain text with no colour of their own, which is
+what keeps the red medical notice from reading as "this result is bad". A handoff
+that names it as an available building block is how the colour comes back.
 
 ## Assets imported
 

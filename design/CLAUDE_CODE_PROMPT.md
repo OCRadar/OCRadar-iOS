@@ -23,6 +23,8 @@ Work in this order:
    `OCRCard`, `OCRHeaderBand`, the three button styles, `OCRTabBar`, `OCRRadar`
    and `OCRReticle` as new files in `Components/`. `GlassCard` is superseded —
    the design is flat and opaque, not glassy; migrate its call sites to `OCRCard`.
+   `RiskBadge` and `ScoreRow` are gone and stay gone: tiers carry no colour of
+   their own, and the scores are drawn by `OCRClassBar`.
 2. `RootView.swift`: add `.preferredColorScheme(.dark)`, hide the system tab bar
    and overlay `OCRTabBar`, and restyle `DisclaimerSheet` per README §7.
 3. `HomeView.swift`: rebuild per README §1 — gradient hero with the tappable
@@ -33,9 +35,13 @@ Work in this order:
    no `ContentUnavailableView` styling. Radar and reticle must be concentric.
 5. `HistoryView.swift`: §3, including the restyled empty state. Group rows by
    real month. Keep swipe-to-delete and the immediate `save()`.
-6. `ResultView.swift`: §5. The professional-care callout keeps its two mutually
-   exclusive branches exactly as they are — a demo result must never get the
-   "tier that warrants professional evaluation" copy.
+6. `ResultView.swift`: §5. The header must read `<percentage>` → "visual
+   similarity" → "Closest match: <category>" → the next-step tier, in that
+   order — never a category name in the largest type with a percentage above it
+   and a severity below. The professional-care callout keeps its two mutually
+   exclusive branches, with the copy §5 and Honesty rule 2 now pin: a demo result
+   must never get the tier branch, and the retired strings ("a tier that warrants
+   professional evaluation", "rule a lesion in or out") must not come back.
 7. `SettingsView.swift`: §4. Drive the class list from
    `classifier.manifest.classes`, not literals.
 

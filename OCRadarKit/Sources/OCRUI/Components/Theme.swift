@@ -112,9 +112,9 @@ nonisolated enum Theme {
     // # Why red is safe here
     //
     // The restyle removed tier colour entirely — `RiskLevel.displayLabel` renders
-    // "Low risk" / "Moderate risk" / "High risk" as plain text in the ambient
-    // ink colours, and there is no `Theme` colour for a tier (see the note on
-    // `RiskLevel.displayLabel`). So red is not currently spoken anywhere in the
+    // "Routine" / "Worth asking about" / "See a professional soon" as plain text
+    // in the ambient ink colours, and there is no `Theme` colour for a tier (see
+    // the note on `RiskLevel.displayLabel`). So red is not spoken anywhere in the
     // app, and the medical notice can claim it outright without a low-risk result
     // inheriting an alarm colour it did not earn.
     //
@@ -276,7 +276,7 @@ nonisolated enum Theme {
         startPoint: .leading, endPoint: .trailing
     )
 
-    /// Descending fills for the "All classes" bars below the top class.
+    /// Descending fills for the similarity-ranking bars below the top class.
     static let barRamp: [Color] = [
         Color(hex: 0x8B4E9E), Color(hex: 0x6B3E86),
         Color(hex: 0x553171), Color(hex: 0x4B2E8F)
@@ -511,14 +511,45 @@ nonisolated extension Color {
 }
 
 nonisolated extension RiskLevel {
-    /// Short human-readable label, e.g. "Low risk". The restyle renders tiers
-    /// as plain text — the old tier-colored `RiskBadge` is gone, so there is
-    /// deliberately no color for a tier any more.
+    /// The tier as **next-step guidance**, e.g. "Worth asking about".
+    ///
+    /// # Why these are actions and not severities
+    ///
+    /// These used to read "Low risk" / "Moderate risk" / "High risk". That is a
+    /// health assertion: it tells a reader how sick they are, which is a claim
+    /// this app cannot make and does not have the evidence to make. The app
+    /// compares an image to reference categories; it does not know what anyone
+    /// has. So the label says what to *do* instead, which is the one thing the
+    /// comparison can honestly support.
+    ///
+    /// Do not revert these to severity words, and do not add "risk" back to
+    /// them. The tier is guidance; `RiskLevel`'s own doc comment says the same
+    /// thing at the source.
+    ///
+    /// Rendered as plain text — the old tier-colored `RiskBadge` is gone, so
+    /// there is deliberately no color for a tier any more (see
+    /// `Theme.medicalNoticeInk` for why that matters). Never abbreviated or
+    /// truncated: layouts wrap or stack instead.
     var displayLabel: String {
         switch self {
-        case .low: "Low risk"
-        case .moderate: "Moderate risk"
-        case .high: "High risk"
+        case .low: "Routine"
+        case .moderate: "Worth asking about"
+        case .high: "See a professional soon"
+        }
+    }
+
+    /// The same guidance as one plain sentence, for detail contexts that have
+    /// room for it — the result sheet and the scan-detail panel, where the
+    /// terse label alone leaves a reader asking "so what do I do?".
+    ///
+    /// Same rule as `displayLabel`: it says what to do next, never what a
+    /// finding is. Rows and compact meta lines use `displayLabel`; this is not
+    /// a replacement for it.
+    var guidanceDetail: String {
+        switch self {
+        case .low: "Mention it at your next dental visit if it doesn't clear up."
+        case .moderate: "Worth bringing to a dentist or doctor the next time you see one."
+        case .high: "Book a visit with a dentist or doctor in the next few days."
         }
     }
 }

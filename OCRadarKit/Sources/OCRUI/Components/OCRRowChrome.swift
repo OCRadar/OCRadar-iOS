@@ -128,7 +128,7 @@ struct OCRChevron: View {
 
 // MARK: - Meta line
 
-/// The line under a row title: `"Low risk · Demo · 1h"`.
+/// The line under a row title: `"Worth asking about · Demo · 1h"`.
 ///
 /// Same information, same short date tokens, same order — `design/README.md`
 /// pins all three. What changes is that the three tokens stop carrying equal
@@ -156,7 +156,8 @@ struct OCRChevron: View {
 /// idea of a middle dot — and so the demo marker can be the *same element* one
 /// size up in one colour, which is what keeps it from reading as decoration.
 struct OCRMetaLine: View {
-    /// e.g. "Low risk". Never abbreviated — `RiskLevel.displayLabel`.
+    /// e.g. "Worth asking about". Always `RiskLevel.displayLabel`, which is
+    /// next-step guidance and never a severity, and never abbreviated.
     let tier: String
     /// The short date token the design pins: `1h` / `1d` / `5d`.
     let timestamp: String
@@ -194,7 +195,7 @@ struct OCRMetaLine: View {
         }
     }
 
-    /// The design's line: `"Low risk · Demo · 1h"`.
+    /// The design's line: `"Worth asking about · Demo · 1h"`.
     private var run: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             tierText
@@ -282,11 +283,11 @@ struct OCRMetaLine: View {
             HStack(alignment: .firstTextBaseline, spacing: Theme.spacingM) {
                 OCRRowIcon(systemName: "doc.text")
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("No visible lesion")
+                    Text("Common tissue appearance")
                         .ocrFont(.rowTitle)
                         .tracking(-0.2)
                         .foregroundStyle(Theme.textPrimary)
-                    OCRMetaLine(tier: "Low risk", timestamp: "1h", isDemo: isDemo)
+                    OCRMetaLine(tier: "Worth asking about", timestamp: "1h", isDemo: isDemo)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 OCRChevron()

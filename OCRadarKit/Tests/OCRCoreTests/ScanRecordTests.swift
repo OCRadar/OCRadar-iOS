@@ -17,7 +17,7 @@ struct ScanRecordTests {
         let scores = [
             LabelScore(
                 id: "healthy",
-                displayName: "No visible lesion",
+                displayName: "Common tissue appearance",
                 riskLevel: .low,
                 probability: 0.3
             ),

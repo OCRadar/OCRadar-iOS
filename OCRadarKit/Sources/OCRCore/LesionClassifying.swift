@@ -30,9 +30,9 @@ public enum ClassifierError: LocalizedError, Equatable, Sendable {
         case .modelNotInstalled:
             "No trained model is installed in this build."
         case .preprocessingFailed:
-            "The photo could not be prepared for analysis."
+            "The photo could not be prepared for comparison."
         case .inferenceFailed(let detail):
-            "Analysis failed: \(detail)"
+            "Comparison failed: \(detail)"
         case .invalidManifest(let detail):
             "The bundled model manifest is invalid: \(detail)"
         }

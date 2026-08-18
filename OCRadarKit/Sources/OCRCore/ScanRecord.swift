@@ -1,8 +1,14 @@
 import Foundation
 import SwiftData
 
-/// One saved analysis. Stored locally via SwiftData; images and results never
+/// One saved comparison. Stored locally via SwiftData; images and results never
 /// leave the device.
+///
+/// "One saved analysis" until this pass. The app does not analyse anything —
+/// it compares a photo with reference images, which is why the button that
+/// produces this record says "Compare" and why the sheet that presents it is
+/// headed "Visual comparison". A doc comment is where the next author learns
+/// the vocabulary, so it uses the same one the screens do.
 @Model
 public final class ScanRecord {
     public var timestamp: Date

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  OCRadar collects nothing and transmits nothing: there is no networking
+	  code in the app, no accounts, no analytics and no third-party SDKs.
+	  Photos, thumbnails and comparison records live only in the on-device
+	  SwiftData store. So NSPrivacyTracking is false, the tracking-domain list
+	  is empty, and NSPrivacyCollectedDataTypes is an empty array rather than
+	  an omitted key — an empty array is the positive statement that nothing is
+	  collected.
+
+	  The one required-reason API the app touches is UserDefaults, read and
+	  written in Release by @AppStorage("hasAcknowledgedDisclaimer") in
+	  RootView — the flag that records the first-launch medical acknowledgement.
+	  CA92.1 is the category for a container the app itself owns.
+
+	  If anything is ever added that uploads, syncs, or reports — a backend, a
+	  crash reporter, HealthKit, CloudKit — this file and the App Store Connect
+	  nutrition label both stop being true on the same day.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

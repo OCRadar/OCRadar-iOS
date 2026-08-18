@@ -61,7 +61,7 @@ The mock default means previews and tests need no wiring. The UI surfaces which 
 
 ## The model + manifest contract
 
-A trained model ships as **two files with exact, hard-coded names**, produced by `ml/ocradar_ml/export.py` and installed into `OCRadar/Resources/ML/` (the app target's synchronized folder puts them in the bundle automatically):
+A trained model ships as **two files with exact, hard-coded names**, produced by [OCRadar/Model](https://github.com/OCRadar/Model)'s `ocradar_ml/export.py` and installed into `OCRadar/Resources/ML/` (the app target's synchronized folder puts them in the bundle automatically):
 
 - `OralLesionClassifier.mlpackage` — an FP16 ML Program classifier. Preprocessing is baked in: the converter's `ImageType` applies `pixel/255 − mean` and the traced graph divides by the per-channel std and applies softmax, so the app feeds raw RGB pixels and reads calibrated class probabilities. The class labels are embedded via `ClassifierConfig`, in the order of the training run's `classes.json`. The exported model's own minimum deployment target is iOS 18 (the app targets iOS 26).
 - `ModelManifest.json` — decoded by `OCRCore/ModelManifest.swift` (plain `Codable`, so JSON keys match the Swift property names exactly).
@@ -70,10 +70,13 @@ A trained model ships as **two files with exact, hard-coded names**, produced by
 
 | Field | Type | Meaning | Validation (`ModelManifest.validate()`) |
 |---|---|---|---|
-| `schemaVersion` | Int | Manifest schema revision | Must be exactly `1` |
+| `schemaVersion` | Int | Manifest schema revision | Must be within `ModelManifest.supportedSchemaVersions` (`1...2`) |
 | `modelVersion` | String | Human-readable model version; shown on Home and in Settings, and stamped into every saved `ScanRecord` | — |
-| `inputSize` | Int | Square model input side in pixels; the pipeline exports 384 (`ml/ocradar_ml/constants.py`) | Must be `> 0` |
+| `inputSize` | Int | Square model input side in pixels; the pipeline exports 384 (`ocradar_ml/constants.py` in the Model repo) | Must be `> 0` |
+| `abstainThreshold` | Double? | **v2, optional.** Probability below which the closest category is not a match and the app shows a no-confident-match result instead of naming one. Compared against a *calibrated* probability — the pipeline bakes its fitted temperature into the exported graph. Absent (never `null`) when the pipeline selected no threshold, which is also what every v1 manifest looks like; `nil` means the pre-abstain behaviour of always showing the closest match | When present, must be within `0...1` |
 | `classes` | Array of ClassInfo | Ordered class metadata, same order as the labels embedded in the model | Non-empty; `id`s must be unique |
+
+v1 and v2 differ only by `abstainThreshold`, so a v1 manifest is a valid v2 manifest that declares no threshold and loads unchanged — a model exported before the abstain path shipped keeps working in a build that has it. A threshold outside `0...1` fails validation and the app falls back to the clearly-labelled mock, rather than loading a real model whose abstain rule is nonsense.
 
 Each ClassInfo object:
 
@@ -81,7 +84,7 @@ Each ClassInfo object:
 |---|---|---|
 | `id` | String | Stable identifier; **must match the class label embedded in the Core ML model** (which is the `data/train/` directory name) |
 | `displayName` | String | Name of the **reference category**, not of anything the user has; the UI presents it as "looks most similar to X" |
-| `riskLevel` | String | Exactly one of `low` \| `moderate` \| `high` (`RiskLevel` raw values). Next-step guidance, not severity: OCRUI renders it as "Routine" / "Worth asking about" / "See a professional soon" (`RiskLevel.displayLabel`, with a longer sentence in `guidanceDetail` for detail contexts). It also drives result callouts and sorting. The raw values are frozen — they are persisted in `ScanRecord` and emitted by `ml/` — so reframing happens in the label, never in the enum |
+| `riskLevel` | String | Exactly one of `low` \| `moderate` \| `high` (`RiskLevel` raw values). Next-step guidance, not severity: OCRUI renders it as "Routine" / "Worth asking about" / "See a professional soon" (`RiskLevel.displayLabel`, with a longer sentence in `guidanceDetail` for detail contexts). It also drives result callouts and sorting. The raw values are frozen — they are persisted in `ScanRecord` and emitted by the Model repo — so reframing happens in the label, never in the enum |
 | `summary` | String | One-or-two-sentence plain-language description of the **category** and the suggested next step. It must not say what a finding is, how likely it is to be anything, or what it may become |
 
 ### Load-time cross-checks
@@ -94,7 +97,7 @@ Each ClassInfo object:
 4. **Label agreement**: when the model declares `classLabels`, their set must equal the set of manifest `id`s, otherwise `invalidManifest` — this prevents scores silently mapping to the wrong classes.
 5. `VNCoreMLModel` preparation failure ⇒ `inferenceFailed`.
 
-At inference time, observations whose identifiers are absent from the manifest are dropped (`compactMap` in `classify`). Both sides of the contract carry mirror comments: `ml/labels.example.yaml` ↔ `ModelManifest.mockOralLesions`, and `constants.py`'s `INPUT_SIZE` ↔ `ModelManifest.inputSize`. If you change one side, change the other.
+At inference time, observations whose identifiers are absent from the manifest are dropped (`compactMap` in `classify`). Both sides of the contract carry mirror comments: the Model repo's `labels.example.yaml` ↔ `ModelManifest.mockOralLesions`, and its `constants.py` `INPUT_SIZE` ↔ `ModelManifest.inputSize`. If you change one side, change the other.
 
 ## Scan data flow
 
@@ -123,10 +126,10 @@ Everything is local: there is no networking code anywhere in the app, and images
 
 No Swift changes are required as long as the new category uses one of the three existing guidance tiers. ("Class" below is the Core ML term — the label embedded in the model and the `data/train/` directory name. Everything user-facing calls it a reference category.)
 
-1. **Add data.** Create `ml/data/train/<class_id>/` with images (and the matching directory under `data/val/` if you keep an explicit val set — train and val must contain identical class directories). The directory name becomes the class `id` everywhere downstream.
-2. **Add metadata.** Add an entry to your labels YAML (start from `ml/labels.example.yaml`): `displayName`, `riskLevel` (exactly `low`, `moderate`, or `high`), and `summary`. The wording is the part that carries risk, not the plumbing: `displayName` names the reference category, `summary` describes that category plus a next step and claims nothing about what a finding is or may become, and `riskLevel` is chosen by how soon someone should raise it with a professional. `labels.example.yaml`'s own entries are the model to copy; `MedicalDisclaimer` is the position they have to stay consistent with.
+1. **Add data.** In the Model repo, add the class to your raw drop and re-run ingest and split, so `data/train/<class_id>/` exists alongside matching `val/` and `test/` directories. The directory name becomes the class `id` everywhere downstream.
+2. **Add metadata.** Add an entry to your labels YAML (start from the Model repo's `labels.example.yaml`): `displayName`, `riskLevel` (exactly `low`, `moderate`, or `high`), and `summary`. The wording is the part that carries risk, not the plumbing: `displayName` names the reference category, `summary` describes that category plus a next step and claims nothing about what a finding is or may become, and `riskLevel` is chosen by how soon someone should raise it with a professional. `labels.example.yaml`'s own entries are the model to copy; `MedicalDisclaimer` is the position they have to stay consistent with.
 3. **Retrain.** `python -m ocradar_ml.train --data data --labels <your>.yaml ...` — passing `--labels` verifies up front that every discovered class has metadata, so export cannot fail after hours of training. The run writes `classes.json`, whose (alphabetical, ImageFolder) order becomes the label order embedded in the model. Do not edit it.
-4. **Export.** `python -m ocradar_ml.export --checkpoint runs/<exp>/best.pt --classes runs/<exp>/classes.json --labels <your>.yaml --model-version <bumped> --out dist` — emits the mlpackage with the new class embedded and a manifest that includes its metadata, in matching order.
+4. **Evaluate, then export.** Export requires `report.json` from `python -m ocradar_ml.evaluate`, which carries the calibration temperature and the abstain threshold — there is no path that ships a model nobody measured. Then `python -m ocradar_ml.export --checkpoint runs/<exp>/best.pt --classes runs/<exp>/classes.json --labels <your>.yaml --report runs/<exp>/report.json --model-version <bumped> --out dist`, which emits the mlpackage with the new class embedded, a manifest carrying its metadata in matching order, and `MODEL_CARD.md`.
 5. **Install.** Copy `dist/OralLesionClassifier.mlpackage` and `dist/ModelManifest.json` into `OCRadar/Resources/ML/`, rebuild the app. The loader's label/manifest cross-check passes, and the UI picks the class up automatically — Settings' class list, ResultView's all-classes scores, the top-class summary, and risk badges are all rendered from the manifest.
 6. **Optional: keep the demo set in sync.** The mock's class set (`ModelManifest.mockOralLesions` in OCRCore) mirrors `labels.example.yaml`; if the new class becomes part of the canonical set, update both, per the sync comments in each file.
 

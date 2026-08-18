@@ -35,12 +35,36 @@ public struct ModelManifest: Codable, Sendable, Equatable {
     public let modelVersion: String
     /// Square input side length in pixels expected by the model.
     public let inputSize: Int
+    /// Probability below which the closest category is *not* a match, and the
+    /// honest answer is that no comparison could be made with confidence.
+    ///
+    /// Added in schema v2, and optional in both senses: absent from v1
+    /// manifests, and absent from a v2 manifest when the pipeline's threshold
+    /// criterion selected none. `nil` means the model declares no floor, and
+    /// the app behaves as it did before this field existed — it shows the
+    /// closest category however weak the match.
+    ///
+    /// The value is compared against a **calibrated** probability. The
+    /// training pipeline fits a temperature on validation data, bakes it into
+    /// the exported Core ML graph, and only then picks this threshold, so the
+    /// number the app compares is drawn from the same distribution the
+    /// threshold was chosen on. A manifest carrying a threshold from one model
+    /// beside another model's weights is the failure this pairing exists to
+    /// prevent; `ml/` emits both together and never separately.
+    public let abstainThreshold: Double?
     public let classes: [ClassInfo]
 
-    public init(schemaVersion: Int, modelVersion: String, inputSize: Int, classes: [ClassInfo]) {
+    public init(
+        schemaVersion: Int,
+        modelVersion: String,
+        inputSize: Int,
+        abstainThreshold: Double? = nil,
+        classes: [ClassInfo]
+    ) {
         self.schemaVersion = schemaVersion
         self.modelVersion = modelVersion
         self.inputSize = inputSize
+        self.abstainThreshold = abstainThreshold
         self.classes = classes
     }
 
@@ -53,9 +77,17 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         classes.first { $0.id == id }
     }
 
+    /// Schema versions this build knows how to read.
+    ///
+    /// v1 and v2 differ only by the optional `abstainThreshold`, so a v1
+    /// manifest is a valid v2 manifest that declares no threshold and is
+    /// accepted unchanged. Keeping both readable is what lets a model exported
+    /// before the abstain path shipped keep working in a build that has it.
+    public static let supportedSchemaVersions: ClosedRange<Int> = 1...2
+
     /// Throws `ClassifierError.invalidManifest` if the manifest is unusable.
     public func validate() throws {
-        guard schemaVersion == 1 else {
+        guard Self.supportedSchemaVersions.contains(schemaVersion) else {
             throw ClassifierError.invalidManifest("Unsupported schema version \(schemaVersion)")
         }
         guard !classes.isEmpty else {
@@ -66,6 +98,17 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         }
         guard Set(classes.map(\.id)).count == classes.count else {
             throw ClassifierError.invalidManifest("Duplicate class identifiers")
+        }
+        // A threshold outside 0...1 cannot be compared against a probability.
+        // Rejecting the manifest is the safe failure: the app falls back to the
+        // mock, which is clearly labelled as carrying no medical meaning,
+        // rather than loading a real model whose abstain rule is nonsense.
+        if let abstainThreshold {
+            guard (0.0...1.0).contains(abstainThreshold) else {
+                throw ClassifierError.invalidManifest(
+                    "Abstain threshold \(abstainThreshold) is outside 0...1"
+                )
+            }
         }
     }
 }
@@ -81,10 +124,19 @@ extension ModelManifest {
 
     /// Class set used by `MockLesionClassifier`, previews, and tests. Mirrors
     /// `ml/labels.example.yaml`.
+    ///
+    /// It declares **no** `abstainThreshold`, and that is deliberate. The demo
+    /// scores are a function of the photo's dimensions, so an abstention drawn
+    /// from them would be as fabricated as the match it replaced — and a
+    /// screen that says "no confident match" is far easier to read as a real
+    /// measurement than one that says 32%. The demo notices already state that
+    /// these numbers mean nothing; adding a second fabricated verdict on top
+    /// would dress the same fiction as caution.
     public static let mockOralLesions = ModelManifest(
-        schemaVersion: 1,
+        schemaVersion: 2,
         modelVersion: "mock-0.0.0",
         inputSize: 384,
+        abstainThreshold: nil,
         classes: [
             // "No visible lesion" until this pass, and it was the one class
             // name that was not a category label at all. Every other name here

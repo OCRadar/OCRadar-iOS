@@ -14,13 +14,11 @@ timeline.xctimeline
 .build/
 .swiftpm/
 
-# Python / ML pipeline
-ml/.venv/
+# The model pipeline now lives in https://github.com/OCRadar/Model.
+# These remain so a local clone of it, or a stray export, cannot be committed
+# here by accident — model artifacts belong in the app bundle, not in git.
 __pycache__/
 *.pyc
 *.egg-info/
-ml/data/
-ml/runs/
-ml/dist/
 *.pt
 *.pth

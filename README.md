@@ -30,7 +30,7 @@ If you are preparing a submission, read [`docs/APP_STORE.md`](docs/APP_STORE.md)
 - **iOS 26** deployment target; iPhone only, portrait orientation
 - Swift 6 language mode; the `OCRadarKit` package uses Swift tools 6.2
 - A **physical iPhone** for camera capture — the Simulator has no camera, so the app offers photo-library import there instead
-- For model training only: **Python 3.10+** with PyTorch ≥ 2.5 and coremltools ≥ 8.0 (see `ml/pyproject.toml`); training runs on CUDA, Apple Silicon (MPS), or CPU
+- For model work only: nothing. The training, evaluation and Core ML export pipeline lives in a separate repository, [OCRadar/Model](https://github.com/OCRadar/Model) — this repo builds and runs without it
 
 ## Getting started
 
@@ -44,22 +44,25 @@ Select the `OCRadar` scheme and run. No further setup is needed: **without a tra
 
 ## Training your own model
 
-The full pipeline — dataset layout, ethics and intended-use guidance, and practical training tips — is documented in [`ml/README.md`](ml/README.md). The short version, after a one-time `cd ml && python3 -m venv .venv && source .venv/bin/activate && pip install -e .`:
+The model pipeline lives in its own repository: **[OCRadar/Model](https://github.com/OCRadar/Model)**. It covers dataset layout and provenance, ingest, source-level splitting, training, held-out evaluation with calibration, the abstain threshold, Core ML export, and the generated model card. Start with its `DATASET_SPEC.md` before collecting any images.
+
+What this repo cares about is the two files that come out of it, and where they go:
 
 ```bash
-# 1. Train (from-scratch compact CNN by default; --labels validates metadata up front)
-python -m ocradar_ml.train --data data --labels labels.example.yaml --epochs 40 --out runs/exp
+# In the Model repo, after training and evaluating:
+python -m ocradar_ml.export \
+  --checkpoint runs/exp/best.pt --classes runs/exp/classes.json \
+  --labels labels.example.yaml --report runs/exp/report.json \
+  --model-version 1.0.0 --out dist
 
-# 2. Export to Core ML (FP16 ML Program + manifest)
-python -m ocradar_ml.export --checkpoint runs/exp/best.pt --classes runs/exp/classes.json \
-  --labels labels.example.yaml --model-version 1.0.0 --out dist
-
-# 3. Install into the app
-mkdir -p ../OCRadar/Resources/ML
-cp -R dist/OralLesionClassifier.mlpackage dist/ModelManifest.json ../OCRadar/Resources/ML/
+# Then install into this repo:
+mkdir -p OCRadar/Resources/ML
+cp -R <Model-repo>/dist/OralLesionClassifier.mlpackage OCRadar/Resources/ML/
+cp <Model-repo>/dist/ModelManifest.json OCRadar/Resources/ML/
 ```
 
-The export lands in **`OCRadar/Resources/ML/`** as `OralLesionClassifier.mlpackage` plus `ModelManifest.json` — the loader expects exactly those names. The app target's synchronized folder picks both up automatically; rebuild and `CoreMLLesionClassifier.bundled()` replaces the mock. `python -m ocradar_ml.selfcheck` verifies the Python environment without any dataset or downloads.
+The Xcode synchronized folder picks both up automatically. The loader expects exactly those two names, and `CoreMLLesionClassifier.bundled()` replaces the mock on the next launch.
+
 
 ## Repository layout
 
@@ -81,12 +84,10 @@ OCR-iOS/
 │   └── Tests/
 │       ├── OCRCoreTests/    # Manifest, classification, scan-record, mock tests
 │       └── OCRVisionTests/  # Preprocessing + bundled-model loading tests
-└── ml/                      # PyTorch training + Core ML export pipeline
-    ├── README.md            # The full training guide
-    ├── labels.example.yaml  # Class metadata (mirrors the app's mock manifest)
-    ├── pyproject.toml
-    └── ocradar_ml/          # train / export / selfcheck CLIs + model, data, labels
+└── docs/                    # Architecture and App Store guidance
 ```
+
+The model pipeline is not in this tree. It lives in [OCRadar/Model](https://github.com/OCRadar/Model).
 
 ## Architecture
 
